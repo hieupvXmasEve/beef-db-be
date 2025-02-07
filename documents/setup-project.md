@@ -1,0 +1,3 @@
+- using sqlc to generate code from sql file
+- using chi to build api
+- using mysql as database
