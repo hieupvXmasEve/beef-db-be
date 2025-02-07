@@ -1,30 +1,41 @@
-# Database Schema for Beef Products Display Website
+# Request AI AGENT to Use `golang-migrate` to Create Migration Files Based on Schema  
 
-## 1. Users Table (For Authentication)
+## Description
+You are an AI specialized in Golang and database migrations. I am using `golang-migrate` to manage database migrations in my project.  
+
+## Requirements
+Please perform the following steps:  
+
+### 1. Create a Migration File
+Use `golang-migrate` to create a new migration file based on the following schema:
+
 ```sql
+-- Users Table
 CREATE TABLE users (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(150) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    role ENUM('admin', 'user') NOT NULL DEFAULT 'user',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
-```
-- **Indexes**: `email` (for faster authentication)
 
-## 2. Product Categories Table
-```sql
+-- Create index on email for faster authentication
+CREATE INDEX idx_users_email ON users(email);
+
+-- Product Categories Table
 CREATE TABLE product_categories (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(100) UNIQUE NOT NULL,
     description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-```
-- **Indexes**: `name` (for quick category lookups)
 
-## 3. Products Table
-```sql
+-- Create index on category name for quick lookups
+CREATE INDEX idx_product_categories_name ON product_categories(name);
+
+-- Products Table
 CREATE TABLE products (
     id INT PRIMARY KEY AUTO_INCREMENT,
     category_id INT NOT NULL,
@@ -35,21 +46,18 @@ CREATE TABLE products (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (category_id) REFERENCES product_categories(id) ON DELETE CASCADE
 );
-```
-- **Indexes**: `category_id` (to speed up filtering by category)
 
-## 4. Website Settings Table (For Site-Wide Configurations)
-```sql
+-- Create index on category_id for faster filtering
+CREATE INDEX idx_products_category_id ON products(category_id);
+
+-- Website Settings Table
 CREATE TABLE website_settings (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(255) NOT NULL,
     value TEXT NOT NULL
 );
-```
-- This table can store key-value pairs like site name, email, phone, etc.
 
-## 5. Blog Posts Table
-```sql
+-- Blog Posts Table
 CREATE TABLE blog_posts (
     id INT PRIMARY KEY AUTO_INCREMENT,
     title VARCHAR(255) NOT NULL,
@@ -57,11 +65,11 @@ CREATE TABLE blog_posts (
     image_url VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-```
-- **Indexes**: `title` (to optimize search performance)
 
-## 6. Contact Messages Table (For Contact Form Submissions)
-```sql
+-- Create index on blog post title for search optimization
+CREATE INDEX idx_blog_posts_title ON blog_posts(title);
+
+-- Contact Messages Table
 CREATE TABLE contact_messages (
     id INT PRIMARY KEY AUTO_INCREMENT,
     name VARCHAR(100) NOT NULL,
@@ -69,19 +77,20 @@ CREATE TABLE contact_messages (
     message TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Create index on contact messages email for grouping messages
+CREATE INDEX idx_contact_messages_email ON contact_messages(email); 
 ```
-- **Indexes**: `email` (to group user messages efficiently)
 
-## Indexes for Optimization
-- `users.email` (for faster authentication)
-- `product_categories.name` (for quick lookups)
-- `products.category_id` (to speed up category filtering)
-- `blog_posts.title` (to optimize search performance)
+### 2. Generate CLI Command
 
-## Additional Features (Optional)
-Would you like to include:
-- **Product tags** for better filtering?
-- **User roles** (admin, editor, etc.)?
-- **SEO fields** for blogs and products (meta title, meta description)?
+Write the golang-migrate command to generate a migration file named create_users_table with the correct syntax.
 
-Let me know if you need any modifications! 🚀
+### 3. Write Migration Content
+
+Provide the content of the migration file (up and down).
+
+### 4. Guide to Running Migration
+
+Explain how to run the migration using golang-migrate with MySQL.
+Ensure that the commands and code are executable in a real-world environment.

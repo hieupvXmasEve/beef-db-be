@@ -1,0 +1,80 @@
+# Go specific
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/vendor/
+
+# Go workspace file
+go.work
+
+# Binary folder
+bin/
+dist/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+tmp/
+temp/
+
+# Build output
+build/
+
+# Test coverage
+coverage.txt
+coverage.html
+
+# Air live reload
+tmp/
+
+# Deployment specific
+*.pem
+*.key
+*.crt
+
+# Dependencies
+node_modules/
+
+# Swagger generated files
+swagger.json
+swagger.yaml
+
+# Local development config files
+config.local.yaml
+*.local.yaml
+
+# Debug files
+__debug_bin
+debug.test 
