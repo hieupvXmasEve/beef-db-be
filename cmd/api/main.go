@@ -12,7 +12,6 @@ import (
 	"beef-db-be/internal/config"
 	"beef-db-be/internal/handler"
 	"beef-db-be/internal/middleware"
-	"beef-db-be/internal/model"
 	"beef-db-be/internal/service"
 )
 
@@ -31,10 +30,14 @@ func main() {
 
 	// Initialize services
 	userService := service.NewUserService(db)
+	categoryService := service.NewCategoryService(db)
+	productService := service.NewProductService(db)
 	healthHandler := handler.NewHealthHandler(db)
 
 	// Initialize handlers
 	userHandler := handler.NewUserHandler(userService)
+	categoryHandler := handler.NewCategoryHandler(categoryService)
+	productHandler := handler.NewProductHandler(productService)
 
 	// Initialize router
 	r := chi.NewRouter()
@@ -55,21 +58,37 @@ func main() {
 		r.Post("/signup", userHandler.SignUp)
 		r.Post("/login", userHandler.Login)
 		r.Post("/logout", userHandler.Logout)
+		r.Get("/users/me", userHandler.GetMe) // Public endpoint for getting current user
 
-		// Protected routes
+		// Public category routes
+		r.Get("/categories", categoryHandler.ListCategories)
+		r.Get("/categories/{id}", categoryHandler.GetCategory)
+		r.Get("/categories/slug/{slug}", categoryHandler.GetCategoryBySlug)
+
+		// Public product routes
+		r.Get("/products", productHandler.ListProducts)
+		r.Get("/products/{id}", productHandler.GetProduct)
+		r.Get("/products/slug/{slug}", productHandler.GetProductBySlug)
+		r.Get("/categories/{categoryId}/products", productHandler.ListProductsByCategory)
+		r.Get("/categories/slug/{categorySlug}/products", productHandler.ListProductsByCategory)
+
+		// Admin-only routes
 		r.Group(func(r chi.Router) {
-			// Apply authentication middleware
-			// r.Use(middleware.AuthMiddleware(userService))
-			r.Use(middleware.RequireAuth)
+			r.Use(middleware.RequireAuth(userService))
 
-			// Routes accessible by all authenticated users
+			// User management
 			r.Get("/users/{id}", userHandler.GetUser)
+			r.Get("/users", userHandler.ListUsers)
 
-			// Admin-only routes
-			r.Group(func(r chi.Router) {
-				r.Use(middleware.RequireRole(model.RoleAdmin))
-				r.Get("/users", userHandler.ListUsers)
-			})
+			// Category management
+			r.Post("/categories", categoryHandler.CreateCategory)
+			r.Put("/categories/{id}", categoryHandler.UpdateCategory)
+			r.Delete("/categories/{id}", categoryHandler.DeleteCategory)
+
+			// Product management
+			r.Post("/products", productHandler.CreateProduct)
+			r.Put("/products/{id}", productHandler.UpdateProduct)
+			r.Delete("/products/{id}", productHandler.DeleteProduct)
 		})
 	})
 

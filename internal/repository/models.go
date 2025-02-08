@@ -61,6 +61,15 @@ type BlogPost struct {
 	CreatedAt sql.NullTime
 }
 
+type Category struct {
+	ID          int32
+	Name        string
+	Slug        string
+	Description sql.NullString
+	ImageUrl    sql.NullString
+	CreatedAt   sql.NullTime
+}
+
 type ContactMessage struct {
 	ID        int32
 	Name      string
@@ -73,16 +82,11 @@ type Product struct {
 	ID          int32
 	CategoryID  int32
 	Name        string
+	Slug        string
 	Description sql.NullString
-	Price       string
+	Price       float64
 	ImageUrl    sql.NullString
-	CreatedAt   sql.NullTime
-}
-
-type ProductCategory struct {
-	ID          int32
-	Name        string
-	Description sql.NullString
+	ThumbUrl    sql.NullString
 	CreatedAt   sql.NullTime
 }
 

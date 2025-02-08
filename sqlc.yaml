@@ -8,3 +8,8 @@ sql:
         package: "repository"
         out: "internal/repository"
         sql_package: "database/sql"
+        overrides:
+          - db_type: "decimal"
+            go_type: "float64"
+          - db_type: "decimal(10,2)"
+            go_type: "float64"

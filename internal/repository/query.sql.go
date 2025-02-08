@@ -11,12 +11,71 @@ import (
 	"time"
 )
 
+const createCategory = `-- name: CreateCategory :execresult
+INSERT INTO
+    categories (name, slug, description, image_url)
+VALUES
+    (?, ?, ?, ?)
+`
+
+type CreateCategoryParams struct {
+	Name        string
+	Slug        string
+	Description sql.NullString
+	ImageUrl    sql.NullString
+}
+
+func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, createCategory,
+		arg.Name,
+		arg.Slug,
+		arg.Description,
+		arg.ImageUrl,
+	)
+}
+
+const createProduct = `-- name: CreateProduct :execresult
+INSERT INTO
+    products (
+        category_id,
+        name,
+        slug,
+        description,
+        price,
+        image_url,
+        thumb_url
+    )
+VALUES
+    (?, ?, ?, ?, ?, ?, ?)
+`
+
+type CreateProductParams struct {
+	CategoryID  int32
+	Name        string
+	Slug        string
+	Description sql.NullString
+	Price       float64
+	ImageUrl    sql.NullString
+	ThumbUrl    sql.NullString
+}
+
+func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (sql.Result, error) {
+	return q.db.ExecContext(ctx, createProduct,
+		arg.CategoryID,
+		arg.Name,
+		arg.Slug,
+		arg.Description,
+		arg.Price,
+		arg.ImageUrl,
+		arg.ThumbUrl,
+	)
+}
+
 const createUser = `-- name: CreateUser :execresult
-INSERT INTO users (
-    email, password, created_at, updated_at
-) VALUES (
-    ?, ?, NOW(), NOW()
-)
+INSERT INTO
+    users (email, password)
+VALUES
+    (?, ?)
 `
 
 type CreateUserParams struct {
@@ -28,18 +87,186 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (sql.Res
 	return q.db.ExecContext(ctx, createUser, arg.Email, arg.Password)
 }
 
+const deleteCategory = `-- name: DeleteCategory :exec
+DELETE FROM categories
+WHERE
+    id = ?
+`
+
+func (q *Queries) DeleteCategory(ctx context.Context, id int32) error {
+	_, err := q.db.ExecContext(ctx, deleteCategory, id)
+	return err
+}
+
+const deleteProduct = `-- name: DeleteProduct :exec
+DELETE FROM products
+WHERE
+    id = ?
+`
+
+func (q *Queries) DeleteProduct(ctx context.Context, id int32) error {
+	_, err := q.db.ExecContext(ctx, deleteProduct, id)
+	return err
+}
+
 const deleteUser = `-- name: DeleteUser :execresult
 DELETE FROM users
-WHERE id = ?
+WHERE
+    id = ?
 `
 
 func (q *Queries) DeleteUser(ctx context.Context, id int64) (sql.Result, error) {
 	return q.db.ExecContext(ctx, deleteUser, id)
 }
 
+const getCategory = `-- name: GetCategory :one
+SELECT
+    id, name, slug, description, image_url, created_at
+FROM
+    categories
+WHERE
+    id = ?
+`
+
+func (q *Queries) GetCategory(ctx context.Context, id int32) (Category, error) {
+	row := q.db.QueryRowContext(ctx, getCategory, id)
+	var i Category
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Slug,
+		&i.Description,
+		&i.ImageUrl,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getCategoryBySlug = `-- name: GetCategoryBySlug :one
+SELECT
+    id, name, slug, description, image_url, created_at
+FROM
+    categories
+WHERE
+    slug = ?
+`
+
+func (q *Queries) GetCategoryBySlug(ctx context.Context, slug string) (Category, error) {
+	row := q.db.QueryRowContext(ctx, getCategoryBySlug, slug)
+	var i Category
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Slug,
+		&i.Description,
+		&i.ImageUrl,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getProduct = `-- name: GetProduct :one
+SELECT
+    p.id, p.category_id, p.name, p.slug, p.description, p.price, p.image_url, p.thumb_url, p.created_at,
+    c.name as category_name,
+    c.slug as category_slug
+FROM
+    products p
+    JOIN categories c ON p.category_id = c.id
+WHERE
+    p.id = ?
+`
+
+type GetProductRow struct {
+	ID           int32
+	CategoryID   int32
+	Name         string
+	Slug         string
+	Description  sql.NullString
+	Price        float64
+	ImageUrl     sql.NullString
+	ThumbUrl     sql.NullString
+	CreatedAt    sql.NullTime
+	CategoryName string
+	CategorySlug string
+}
+
+func (q *Queries) GetProduct(ctx context.Context, id int32) (GetProductRow, error) {
+	row := q.db.QueryRowContext(ctx, getProduct, id)
+	var i GetProductRow
+	err := row.Scan(
+		&i.ID,
+		&i.CategoryID,
+		&i.Name,
+		&i.Slug,
+		&i.Description,
+		&i.Price,
+		&i.ImageUrl,
+		&i.ThumbUrl,
+		&i.CreatedAt,
+		&i.CategoryName,
+		&i.CategorySlug,
+	)
+	return i, err
+}
+
+const getProductBySlug = `-- name: GetProductBySlug :one
+SELECT
+    p.id, p.category_id, p.name, p.slug, p.description, p.price, p.image_url, p.thumb_url, p.created_at,
+    c.name as category_name,
+    c.slug as category_slug
+FROM
+    products p
+    JOIN categories c ON p.category_id = c.id
+WHERE
+    p.slug = ?
+`
+
+type GetProductBySlugRow struct {
+	ID           int32
+	CategoryID   int32
+	Name         string
+	Slug         string
+	Description  sql.NullString
+	Price        float64
+	ImageUrl     sql.NullString
+	ThumbUrl     sql.NullString
+	CreatedAt    sql.NullTime
+	CategoryName string
+	CategorySlug string
+}
+
+func (q *Queries) GetProductBySlug(ctx context.Context, slug string) (GetProductBySlugRow, error) {
+	row := q.db.QueryRowContext(ctx, getProductBySlug, slug)
+	var i GetProductBySlugRow
+	err := row.Scan(
+		&i.ID,
+		&i.CategoryID,
+		&i.Name,
+		&i.Slug,
+		&i.Description,
+		&i.Price,
+		&i.ImageUrl,
+		&i.ThumbUrl,
+		&i.CreatedAt,
+		&i.CategoryName,
+		&i.CategorySlug,
+	)
+	return i, err
+}
+
 const getUser = `-- name: GetUser :one
-SELECT id, email, password, role, created_at, updated_at FROM users
-WHERE id = ? LIMIT 1
+SELECT
+    id,
+    email,
+    password,
+    role,
+    created_at,
+    updated_at
+FROM
+    users
+WHERE
+    id = ?
 `
 
 func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
@@ -57,8 +284,17 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, password, role, created_at, updated_at FROM users
-WHERE email = ? LIMIT 1
+SELECT
+    id,
+    email,
+    password,
+    role,
+    created_at,
+    updated_at
+FROM
+    users
+WHERE
+    email = ?
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -76,7 +312,10 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserCount = `-- name: GetUserCount :one
-SELECT COUNT(*) FROM users
+SELECT
+    COUNT(*)
+FROM
+    users
 `
 
 func (q *Queries) GetUserCount(ctx context.Context) (int64, error) {
@@ -86,8 +325,184 @@ func (q *Queries) GetUserCount(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const listCategories = `-- name: ListCategories :many
+SELECT
+    id, name, slug, description, image_url, created_at
+FROM
+    categories
+ORDER BY
+    created_at DESC
+`
+
+func (q *Queries) ListCategories(ctx context.Context) ([]Category, error) {
+	rows, err := q.db.QueryContext(ctx, listCategories)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Category
+	for rows.Next() {
+		var i Category
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Slug,
+			&i.Description,
+			&i.ImageUrl,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProducts = `-- name: ListProducts :many
+SELECT
+    p.id, p.category_id, p.name, p.slug, p.description, p.price, p.image_url, p.thumb_url, p.created_at,
+    c.name as category_name,
+    c.slug as category_slug
+FROM
+    products p
+    JOIN categories c ON p.category_id = c.id
+ORDER BY
+    p.created_at DESC
+`
+
+type ListProductsRow struct {
+	ID           int32
+	CategoryID   int32
+	Name         string
+	Slug         string
+	Description  sql.NullString
+	Price        float64
+	ImageUrl     sql.NullString
+	ThumbUrl     sql.NullString
+	CreatedAt    sql.NullTime
+	CategoryName string
+	CategorySlug string
+}
+
+func (q *Queries) ListProducts(ctx context.Context) ([]ListProductsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listProducts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProductsRow
+	for rows.Next() {
+		var i ListProductsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CategoryID,
+			&i.Name,
+			&i.Slug,
+			&i.Description,
+			&i.Price,
+			&i.ImageUrl,
+			&i.ThumbUrl,
+			&i.CreatedAt,
+			&i.CategoryName,
+			&i.CategorySlug,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProductsByCategory = `-- name: ListProductsByCategory :many
+SELECT
+    p.id, p.category_id, p.name, p.slug, p.description, p.price, p.image_url, p.thumb_url, p.created_at,
+    c.name as category_name,
+    c.slug as category_slug
+FROM
+    products p
+    JOIN categories c ON p.category_id = c.id
+WHERE
+    c.id = ?
+    OR c.slug = ?
+ORDER BY
+    p.created_at DESC
+`
+
+type ListProductsByCategoryParams struct {
+	ID   int32
+	Slug string
+}
+
+type ListProductsByCategoryRow struct {
+	ID           int32
+	CategoryID   int32
+	Name         string
+	Slug         string
+	Description  sql.NullString
+	Price        float64
+	ImageUrl     sql.NullString
+	ThumbUrl     sql.NullString
+	CreatedAt    sql.NullTime
+	CategoryName string
+	CategorySlug string
+}
+
+func (q *Queries) ListProductsByCategory(ctx context.Context, arg ListProductsByCategoryParams) ([]ListProductsByCategoryRow, error) {
+	rows, err := q.db.QueryContext(ctx, listProductsByCategory, arg.ID, arg.Slug)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProductsByCategoryRow
+	for rows.Next() {
+		var i ListProductsByCategoryRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CategoryID,
+			&i.Name,
+			&i.Slug,
+			&i.Description,
+			&i.Price,
+			&i.ImageUrl,
+			&i.ThumbUrl,
+			&i.CreatedAt,
+			&i.CategoryName,
+			&i.CategorySlug,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUsers = `-- name: ListUsers :many
-SELECT id, email, role, created_at, updated_at FROM users
+SELECT
+    id,
+    email,
+    role,
+    created_at,
+    updated_at
+FROM
+    users
 `
 
 type ListUsersRow struct {
@@ -127,10 +542,81 @@ func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 	return items, nil
 }
 
+const updateCategory = `-- name: UpdateCategory :exec
+UPDATE categories
+SET
+    name = ?,
+    slug = ?,
+    description = ?,
+    image_url = ?
+WHERE
+    id = ?
+`
+
+type UpdateCategoryParams struct {
+	Name        string
+	Slug        string
+	Description sql.NullString
+	ImageUrl    sql.NullString
+	ID          int32
+}
+
+func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) error {
+	_, err := q.db.ExecContext(ctx, updateCategory,
+		arg.Name,
+		arg.Slug,
+		arg.Description,
+		arg.ImageUrl,
+		arg.ID,
+	)
+	return err
+}
+
+const updateProduct = `-- name: UpdateProduct :exec
+UPDATE products
+SET
+    category_id = ?,
+    name = ?,
+    slug = ?,
+    description = ?,
+    price = ?,
+    image_url = ?,
+    thumb_url = ?
+WHERE
+    id = ?
+`
+
+type UpdateProductParams struct {
+	CategoryID  int32
+	Name        string
+	Slug        string
+	Description sql.NullString
+	Price       float64
+	ImageUrl    sql.NullString
+	ThumbUrl    sql.NullString
+	ID          int32
+}
+
+func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) error {
+	_, err := q.db.ExecContext(ctx, updateProduct,
+		arg.CategoryID,
+		arg.Name,
+		arg.Slug,
+		arg.Description,
+		arg.Price,
+		arg.ImageUrl,
+		arg.ThumbUrl,
+		arg.ID,
+	)
+	return err
+}
+
 const updateUser = `-- name: UpdateUser :exec
 UPDATE users
-SET email = ?, updated_at = NOW()
-WHERE id = ?
+SET
+    email = ?
+WHERE
+    id = ?
 `
 
 type UpdateUserParams struct {

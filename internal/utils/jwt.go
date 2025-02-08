@@ -49,8 +49,8 @@ func SetJWTCookie(w http.ResponseWriter, token string) {
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true, // Enable in production (requires HTTPS)
-		SameSite: http.SameSiteStrictMode,
+		Secure:   false, // Enable in production (requires HTTPS)
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   int(TokenExpiry.Seconds()),
 	})
 }
@@ -62,8 +62,8 @@ func ClearJWTCookie(w http.ResponseWriter) {
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
+		Secure:   false,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
 	})
 }
@@ -91,4 +91,4 @@ func ValidateJWT(tokenString string) (*Claims, error) {
 	}
 
 	return nil, fmt.Errorf("invalid token")
-} 
+}

@@ -92,31 +92,49 @@ func RequireRole(roles ...model.Role) func(next http.Handler) http.Handler {
 	}
 }
 
-// RequireAuth is a middleware that checks for a valid JWT token in cookies
-func RequireAuth(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie(utils.TokenCookieName)
-		if err != nil {
-			utils.SendResponse(w, http.StatusUnauthorized,
-				model.NewErrorResponse("Authentication required", "No authentication token provided"))
-			return
-		}
+// RequireAuth is a middleware that checks for a valid JWT token in cookies and ensures admin role
+func RequireAuth(userService *service.UserService) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			cookie, err := r.Cookie(utils.TokenCookieName)
+			if err != nil {
+				utils.SendResponse(w, http.StatusUnauthorized,
+					model.NewErrorResponse("Authentication required", "No authentication token provided"))
+				return
+			}
 
-		claims, err := utils.ValidateJWT(cookie.Value)
-		if err != nil {
-			utils.SendResponse(w, http.StatusUnauthorized,
-				model.NewErrorResponse("Authentication failed", "Invalid or expired token"))
-			return
-		}
+			claims, err := utils.ValidateJWT(cookie.Value)
+			if err != nil {
+				utils.SendResponse(w, http.StatusUnauthorized,
+					model.NewErrorResponse("Authentication failed", "Invalid or expired token"))
+				return
+			}
 
-		// Add user ID to request context
-		ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
+			// Get user from database to check role
+			user, err := userService.GetUser(r.Context(), claims.UserID)
+			if err != nil {
+				utils.SendResponse(w, http.StatusUnauthorized,
+					model.NewErrorResponse("Authentication failed", "User not found"))
+				return
+			}
+
+			// Check if user is admin
+			if user.Role != model.RoleAdmin {
+				utils.SendResponse(w, http.StatusForbidden,
+					model.NewErrorResponse("Access denied", "Admin role required"))
+				return
+			}
+
+			// Add user ID and user object to request context
+			ctx := context.WithValue(r.Context(), UserIDKey, claims.UserID)
+			ctx = context.WithValue(ctx, UserContextKey, user)
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
 }
 
 // GetUserID retrieves the user ID from the request context
 func GetUserID(r *http.Request) (int64, bool) {
 	userID, ok := r.Context().Value(UserIDKey).(int64)
 	return userID, ok
-} 
+}

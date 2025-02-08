@@ -27,7 +27,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req model.LoginRequest
 	fmt.Println("Login error:")
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.SendResponse(w, http.StatusBadRequest, 
+		utils.SendResponse(w, http.StatusBadRequest,
 			model.NewErrorResponse("Invalid request body", []model.ValidationError{
 				model.NewValidationError("body", "Invalid JSON format"),
 			}))
@@ -36,7 +36,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.userService.Login(r.Context(), req)
 	if err != nil {
-		utils.SendResponse(w, http.StatusUnauthorized, 
+		utils.SendResponse(w, http.StatusUnauthorized,
 			model.NewErrorResponse("Login failed", err.Error()))
 		return
 	}
@@ -44,7 +44,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	// Generate JWT token
 	token, err := utils.GenerateJWT(resp.User.ID)
 	if err != nil {
-		utils.SendResponse(w, http.StatusInternalServerError, 
+		utils.SendResponse(w, http.StatusInternalServerError,
 			model.NewErrorResponse("Failed to generate token", err.Error()))
 		return
 	}
@@ -52,24 +52,23 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	// Set JWT cookie
 	utils.SetJWTCookie(w, token)
 
-	utils.SendResponse(w, http.StatusOK, 
+	utils.SendResponse(w, http.StatusOK,
 		model.NewSuccessResponse("Login successful", resp))
 }
 
 func (h *UserHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	// Clear the JWT cookie
 	utils.ClearJWTCookie(w)
-	
-	utils.SendResponse(w, http.StatusOK, 
+
+	utils.SendResponse(w, http.StatusOK,
 		model.NewSuccessResponse("Successfully logged out", nil))
 }
 
 func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("GetUser")
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		utils.SendResponse(w, http.StatusBadRequest, 
+		utils.SendResponse(w, http.StatusBadRequest,
 			model.NewErrorResponse("Invalid user ID", []model.ValidationError{
 				model.NewValidationError("id", "Must be a valid number"),
 			}))
@@ -78,24 +77,24 @@ func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.userService.GetUser(r.Context(), id)
 	if err != nil {
-		utils.SendResponse(w, http.StatusNotFound, 
+		utils.SendResponse(w, http.StatusNotFound,
 			model.NewErrorResponse("User not found", err.Error()))
 		return
 	}
 
-	utils.SendResponse(w, http.StatusOK, 
+	utils.SendResponse(w, http.StatusOK,
 		model.NewSuccessResponse("User retrieved successfully", user))
 }
 
 func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := h.userService.ListUsers(r.Context())
 	if err != nil {
-		utils.SendResponse(w, http.StatusInternalServerError, 
+		utils.SendResponse(w, http.StatusInternalServerError,
 			model.NewErrorResponse("Failed to retrieve users", err.Error()))
 		return
 	}
 
-	utils.SendResponse(w, http.StatusOK, 
+	utils.SendResponse(w, http.StatusOK,
 		model.NewSuccessResponse("Users retrieved successfully", users))
 }
 
@@ -103,7 +102,7 @@ func (h *UserHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	var req model.SignUpRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.SendResponse(w, http.StatusBadRequest, 
+		utils.SendResponse(w, http.StatusBadRequest,
 			model.NewErrorResponse("Invalid request body", []model.ValidationError{
 				model.NewValidationError("body", "Invalid JSON format"),
 			}))
@@ -112,11 +111,43 @@ func (h *UserHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.userService.SignUp(r.Context(), req)
 	if err != nil {
-		utils.SendResponse(w, http.StatusBadRequest, 
+		utils.SendResponse(w, http.StatusBadRequest,
 			model.NewErrorResponse("Sign up failed", err.Error()))
 		return
 	}
 
-	utils.SendResponse(w, http.StatusCreated, 
+	utils.SendResponse(w, http.StatusCreated,
 		model.NewSuccessResponse("User created successfully", user))
-} 
+}
+
+// GetMe retrieves the currently logged-in user's information
+func (h *UserHandler) GetMe(w http.ResponseWriter, r *http.Request) {
+	// Get JWT token from cookie
+	cookie, err := r.Cookie(utils.TokenCookieName)
+	// get all cookies
+
+	if err != nil {
+		utils.SendResponse(w, http.StatusUnauthorized,
+			model.NewErrorResponse("Authentication required", "No authentication token provided"))
+		return
+	}
+
+	// Validate JWT token
+	claims, err := utils.ValidateJWT(cookie.Value)
+	if err != nil {
+		utils.SendResponse(w, http.StatusUnauthorized,
+			model.NewErrorResponse("Authentication failed", "Invalid or expired token"))
+		return
+	}
+
+	// Get user from database
+	user, err := h.userService.GetUser(r.Context(), claims.UserID)
+	if err != nil {
+		utils.SendResponse(w, http.StatusInternalServerError,
+			model.NewErrorResponse("Failed to retrieve user", err.Error()))
+		return
+	}
+
+	utils.SendResponse(w, http.StatusOK,
+		model.NewSuccessResponse("User retrieved successfully", user))
+}

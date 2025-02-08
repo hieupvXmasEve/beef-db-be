@@ -29,8 +29,8 @@ func CORS(next http.Handler) http.Handler {
 		// Set other CORS headers
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Authorization, Content-Type, X-CSRF-Token")
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		w.Header().Set("Access-Control-Max-Age", "300") // 5 minutes
+		w.Header().Set("Access-Control-Allow-Credentials", "true") // Added AllowCredentials: true
+		w.Header().Set("Access-Control-Max-Age", "300")            // 5 minutes
 
 		// Handle preflight requests
 		if r.Method == http.MethodOptions {
@@ -40,4 +40,4 @@ func CORS(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
-} 
+}
