@@ -97,6 +97,7 @@ func RequireAuth(userService *service.UserService) func(next http.Handler) http.
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			cookie, err := r.Cookie(utils.TokenCookieName)
+			fmt.Println("err", err)
 			if err != nil {
 				utils.SendResponse(w, http.StatusUnauthorized,
 					model.NewErrorResponse("Authentication required", "No authentication token provided"))

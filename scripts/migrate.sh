@@ -26,7 +26,7 @@ urlencode() {
 # Construct database URL with encoded credentials
 DB_USER_ENCODED=$(urlencode "${DB_USER}")
 DB_PASS_ENCODED=$(urlencode "${DB_PASSWORD}")
-DB_URL="mysql://${DB_USER_ENCODED}:${DB_PASS_ENCODED}@tcp(${DB_HOST}:${DB_PORT})/${DB_NAME}?multiStatements=true"
+DB_URL="postgres://${DB_USER_ENCODED}:${DB_PASS_ENCODED}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require"
 
 echo "Database URL: ${DB_URL}"
 

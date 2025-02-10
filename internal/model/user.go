@@ -10,8 +10,8 @@ const (
 // User represents a user in the system
 type User struct {
 	GVA_MODEL
-	Email    string `json:"email"`
-	Role     Role   `json:"role"`
+	Email string `json:"email"`
+	Role  Role   `json:"role"`
 }
 
 // SignUpRequest represents the request body for user registration
@@ -30,4 +30,4 @@ type LoginRequest struct {
 type LoginResponse struct {
 	Token string `json:"token"`
 	User  User   `json:"user"`
-} 
+}

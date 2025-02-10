@@ -2,8 +2,11 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"errors"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"beef-db-be/internal/model"
 	"beef-db-be/internal/repository"
@@ -11,13 +14,13 @@ import (
 
 type CategoryService struct {
 	queries *repository.Queries
-	db      *sql.DB
+	pool    *pgxpool.Pool
 }
 
-func NewCategoryService(db *sql.DB) *CategoryService {
+func NewCategoryService(pool *pgxpool.Pool) *CategoryService {
 	return &CategoryService{
-		queries: repository.New(db),
-		db:      db,
+		queries: repository.New(pool),
+		pool:    pool,
 	}
 }
 
@@ -25,25 +28,20 @@ func (s *CategoryService) CreateCategory(ctx context.Context, req model.CreateCa
 	result, err := s.queries.CreateCategory(ctx, repository.CreateCategoryParams{
 		Name:        req.Name,
 		Slug:        req.Slug,
-		Description: sql.NullString{String: req.Description, Valid: req.Description != ""},
-		ImageUrl:    sql.NullString{String: req.ImageURL, Valid: req.ImageURL != ""},
+		Description: pgtype.Text{String: req.Description, Valid: req.Description != ""},
+		ImageUrl:    pgtype.Text{String: req.ImageURL, Valid: req.ImageURL != ""},
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, err
-	}
-
-	return s.GetCategory(ctx, int(id))
+	return s.GetCategory(ctx, int(result))
 }
 
 func (s *CategoryService) GetCategory(ctx context.Context, id int) (*model.Category, error) {
 	category, err := s.queries.GetCategory(ctx, int32(id))
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errors.New("category not found")
 		}
 		return nil, err
@@ -62,7 +60,7 @@ func (s *CategoryService) GetCategory(ctx context.Context, id int) (*model.Categ
 func (s *CategoryService) GetCategoryBySlug(ctx context.Context, slug string) (*model.Category, error) {
 	category, err := s.queries.GetCategoryBySlug(ctx, slug)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errors.New("category not found")
 		}
 		return nil, err
@@ -85,14 +83,14 @@ func (s *CategoryService) ListCategories(ctx context.Context) ([]model.Category,
 	}
 
 	result := make([]model.Category, len(categories))
-	for i, cat := range categories {
+	for i, category := range categories {
 		result[i] = model.Category{
-			ID:          int(cat.ID),
-			Name:        cat.Name,
-			Slug:        cat.Slug,
-			Description: cat.Description.String,
-			ImageURL:    cat.ImageUrl.String,
-			CreatedAt:   cat.CreatedAt.Time,
+			ID:          int(category.ID),
+			Name:        category.Name,
+			Slug:        category.Slug,
+			Description: category.Description.String,
+			ImageURL:    category.ImageUrl.String,
+			CreatedAt:   category.CreatedAt.Time,
 		}
 	}
 
@@ -104,11 +102,11 @@ func (s *CategoryService) UpdateCategory(ctx context.Context, id int, req model.
 		ID:          int32(id),
 		Name:        req.Name,
 		Slug:        req.Slug,
-		Description: sql.NullString{String: req.Description, Valid: req.Description != ""},
-		ImageUrl:    sql.NullString{String: req.ImageURL, Valid: req.ImageURL != ""},
+		Description: pgtype.Text{String: req.Description, Valid: req.Description != ""},
+		ImageUrl:    pgtype.Text{String: req.ImageURL, Valid: req.ImageURL != ""},
 	})
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errors.New("category not found")
 		}
 		return nil, err
@@ -120,7 +118,7 @@ func (s *CategoryService) UpdateCategory(ctx context.Context, id int, req model.
 func (s *CategoryService) DeleteCategory(ctx context.Context, id int) error {
 	err := s.queries.DeleteCategory(ctx, int32(id))
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return errors.New("category not found")
 		}
 		return err

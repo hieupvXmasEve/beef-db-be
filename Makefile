@@ -115,4 +115,4 @@ dev:
 # Install air for live reloading
 install-air:
 	@echo "Installing air..."
-	go install github.com/cosmtrek/air@latest
+	go install github.com/air-verse/air@latest

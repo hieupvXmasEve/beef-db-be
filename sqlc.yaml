@@ -1,15 +1,35 @@
 version: "2"
 sql:
-  - engine: "mysql"
+  - engine: "postgresql"
     queries: "sqlc/query.sql"
     schema: "sqlc/schema.sql"
     gen:
       go:
         package: "repository"
         out: "internal/repository"
-        sql_package: "database/sql"
+        sql_package: "pgx/v5"
         overrides:
-          - db_type: "decimal"
-            go_type: "float64"
-          - db_type: "decimal(10,2)"
-            go_type: "float64"
+          - db_type: "DECIMAL(10, 2)"
+            nullable: true
+            go_type: "null.Float"  # Cho các trường nullable như price_sale
+          - column: "products.description"
+            go_type: "string"
+            nullable: true
+          - column: "products.image_url"
+            go_type: "string"
+            nullable: true
+          - column: "products.thumb_url"
+            go_type: "string"
+            nullable: true
+        # emit_json_tags: true
+        # emit_prepared_queries: false
+        # emit_interface: false
+        # emit_exact_table_names: false
+        # emit_empty_slices: false
+        # emit_exported_queries: false
+        # emit_result_struct_pointers: false
+        # emit_params_struct_pointers: false
+        # emit_methods_with_db_argument: false
+        # emit_enum_valid_method: false
+        # emit_all_enum_values: false
+        # json_tags_case_style: "snake"

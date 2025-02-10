@@ -1,40 +1,32 @@
 package handler
 
 import (
-	"database/sql"
-	"encoding/json"
 	"net/http"
 
-	"beef-db-be/internal/config"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"beef-db-be/internal/model"
+	"beef-db-be/internal/utils"
 )
 
 type HealthHandler struct {
-	db *sql.DB
+	pool *pgxpool.Pool
 }
 
-type HealthResponse struct {
-	Status   string           `json:"status"`
-	Database *config.DBStatus `json:"database"`
-}
-
-func NewHealthHandler(db *sql.DB) *HealthHandler {
+func NewHealthHandler(pool *pgxpool.Pool) *HealthHandler {
 	return &HealthHandler{
-		db: db,
+		pool: pool,
 	}
 }
 
 func (h *HealthHandler) CheckHealth(w http.ResponseWriter, r *http.Request) {
-	dbStatus, err := config.CheckDBConnection(h.db)
-	
-	response := HealthResponse{
-		Status:   "healthy",
-		Database: dbStatus,
+	// Check database connection
+	if err := h.pool.Ping(r.Context()); err != nil {
+		utils.SendResponse(w, http.StatusServiceUnavailable,
+			model.NewErrorResponse("Database connection failed", err.Error()))
+		return
 	}
 
-	if err != nil {
-		response.Status = "unhealthy"
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
-} 
+	utils.SendResponse(w, http.StatusOK,
+		model.NewSuccessResponse("Service is healthy", nil))
+}

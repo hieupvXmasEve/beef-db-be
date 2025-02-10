@@ -1,183 +1,180 @@
--- name: CreateUser :execresult
-INSERT INTO
-    users (email, password)
-VALUES
-    (?, ?);
+-- name: CreateUser :one
+INSERT INTO users (email, password)
+VALUES ($1, $2)
+RETURNING id;
 
 -- name: GetUser :one
-SELECT
-    id,
-    email,
-    password,
-    role,
-    created_at,
-    updated_at
-FROM
-    users
-WHERE
-    id = ?;
+SELECT id, email, password, role, created_at, updated_at
+FROM users
+WHERE id = $1;
 
 -- name: GetUserByEmail :one
-SELECT
-    id,
-    email,
-    password,
-    role,
-    created_at,
-    updated_at
-FROM
-    users
-WHERE
-    email = ?;
+SELECT id, email, password, role, created_at, updated_at
+FROM users
+WHERE email = $1;
 
 -- name: ListUsers :many
-SELECT
-    id,
-    email,
-    role,
-    created_at,
-    updated_at
-FROM
-    users;
+SELECT id, email, role, created_at, updated_at
+FROM users;
 
 -- name: UpdateUser :exec
 UPDATE users
-SET
-    email = ?
-WHERE
-    id = ?;
+SET email = $1
+WHERE id = $2;
 
--- name: DeleteUser :execresult
+-- name: DeleteUser :exec
 DELETE FROM users
-WHERE
-    id = ?;
+WHERE id = $1;
 
 -- name: GetUserCount :one
-SELECT
-    COUNT(*)
-FROM
-    users;
+SELECT COUNT(*)
+FROM users;
 
--- name: CreateCategory :execresult
-INSERT INTO
-    categories (name, slug, description, image_url)
-VALUES
-    (?, ?, ?, ?);
+-- name: CreateCategory :one
+INSERT INTO categories (name, slug, description, image_url)
+VALUES ($1, $2, $3, $4)
+RETURNING id;
 
 -- name: GetCategory :one
-SELECT
-    *
-FROM
-    categories
-WHERE
-    id = ?;
+SELECT *
+FROM categories
+WHERE id = $1;
 
 -- name: GetCategoryBySlug :one
-SELECT
-    *
-FROM
-    categories
-WHERE
-    slug = ?;
+SELECT *
+FROM categories
+WHERE slug = $1;
 
 -- name: ListCategories :many
-SELECT
-    *
-FROM
-    categories
-ORDER BY
-    created_at DESC;
+SELECT *
+FROM categories
+ORDER BY created_at DESC;
 
 -- name: UpdateCategory :exec
 UPDATE categories
-SET
-    name = ?,
-    slug = ?,
-    description = ?,
-    image_url = ?
-WHERE
-    id = ?;
+SET name = $1, slug = $2, description = $3, image_url = $4
+WHERE id = $5;
 
 -- name: DeleteCategory :exec
 DELETE FROM categories
-WHERE
-    id = ?;
+WHERE id = $1;
 
--- name: CreateProduct :execresult
-INSERT INTO
-    products (
-        category_id,
-        name,
-        slug,
-        description,
-        price,
-        image_url,
-        thumb_url
-    )
-VALUES
-    (?, ?, ?, ?, ?, ?, ?);
+-- name: CreateProduct :one
+INSERT INTO products (
+    category_id,
+    name,
+    slug,
+    description,
+    price,
+    price_sale,
+    image_url,
+    thumb_url
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id;
 
 -- name: GetProduct :one
 SELECT
-    p.*,
+    p.id,
+    p.category_id,
+    p.name,
+    p.slug,
+    p.description,
+    p.price,
+    p.price_sale,
+    p.image_url,
+    p.thumb_url,
+    p.created_at,
     c.name as category_name,
     c.slug as category_slug
-FROM
-    products p
-    JOIN categories c ON p.category_id = c.id
-WHERE
-    p.id = ?;
+FROM products p
+JOIN categories c ON p.category_id = c.id
+WHERE p.id = $1;
 
 -- name: GetProductBySlug :one
 SELECT
-    p.*,
+    p.id,
+    p.category_id,
+    p.name,
+    p.slug,
+    p.description,
+    p.price,
+    p.price_sale,
+    p.image_url,
+    p.thumb_url,
+    p.created_at,
     c.name as category_name,
     c.slug as category_slug
-FROM
-    products p
-    JOIN categories c ON p.category_id = c.id
-WHERE
-    p.slug = ?;
+FROM products p
+JOIN categories c ON p.category_id = c.id
+WHERE p.slug = $1;
 
 -- name: ListProducts :many
+WITH total AS (
+    SELECT COUNT(*) as count
+    FROM products
+)
 SELECT
-    p.*,
+    p.id,
+    p.category_id,
+    p.name,
+    p.slug,
+    p.description,
+    p.price,
+    p.price_sale,
+    p.image_url,
+    p.thumb_url,
+    p.created_at,
     c.name as category_name,
-    c.slug as category_slug
-FROM
-    products p
-    JOIN categories c ON p.category_id = c.id
-ORDER BY
-    p.created_at DESC;
+    c.slug as category_slug,
+    total.count as total_count
+FROM products p
+JOIN categories c ON p.category_id = c.id
+CROSS JOIN total
+ORDER BY p.created_at DESC
+LIMIT $1 OFFSET $2;
 
 -- name: ListProductsByCategory :many
-SELECT
-    p.*,
-    c.name as category_name,
-    c.slug as category_slug
-FROM
-    products p
+WITH total AS (
+    SELECT COUNT(*) as count
+    FROM products p
     JOIN categories c ON p.category_id = c.id
-WHERE
-    c.id = ?
-    OR c.slug = ?
-ORDER BY
-    p.created_at DESC;
+    WHERE c.id = $1 OR c.slug = $2
+)
+SELECT
+    p.id,
+    p.category_id,
+    p.name,
+    p.slug,
+    p.description,
+    p.price,
+    p.price_sale,
+    p.image_url,
+    p.thumb_url,
+    p.created_at,
+    c.name as category_name,
+    c.slug as category_slug,
+    total.count as total_count
+FROM products p
+JOIN categories c ON p.category_id = c.id
+CROSS JOIN total
+WHERE c.id = $1 OR c.slug = $2
+ORDER BY p.created_at DESC
+LIMIT $3 OFFSET $4;
 
 -- name: UpdateProduct :exec
 UPDATE products
 SET
-    category_id = ?,
-    name = ?,
-    slug = ?,
-    description = ?,
-    price = ?,
-    image_url = ?,
-    thumb_url = ?
-WHERE
-    id = ?;
+    category_id = $1,
+    name = $2,
+    slug = $3,
+    description = $4,
+    price = $5,
+    price_sale = $6,
+    image_url = $7,
+    thumb_url = $8
+WHERE id = $9;
 
 -- name: DeleteProduct :exec
 DELETE FROM products
-WHERE
-    id = ?;
+WHERE id = $1;

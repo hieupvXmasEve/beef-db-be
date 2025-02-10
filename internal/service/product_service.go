@@ -2,8 +2,12 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"errors"
+	"fmt"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"beef-db-be/internal/model"
 	"beef-db-be/internal/repository"
@@ -11,45 +15,65 @@ import (
 
 type ProductService struct {
 	queries *repository.Queries
-	db      *sql.DB
+	pool    *pgxpool.Pool
 }
 
-func NewProductService(db *sql.DB) *ProductService {
+func NewProductService(pool *pgxpool.Pool) *ProductService {
 	return &ProductService{
-		queries: repository.New(db),
-		db:      db,
+		queries: repository.New(pool),
+		pool:    pool,
 	}
 }
 
 func (s *ProductService) CreateProduct(ctx context.Context, req model.CreateProductRequest) (*model.Product, error) {
+	var priceSale pgtype.Numeric
+	if req.PriceSale != 0 {
+		if err := priceSale.Scan(fmt.Sprintf("%.2f", req.PriceSale)); err != nil {
+			return nil, fmt.Errorf("invalid price_sale: %v", err)
+		}
+	}
+
+	var price pgtype.Numeric
+	if err := price.Scan(fmt.Sprintf("%.2f", req.Price)); err != nil {
+		return nil, fmt.Errorf("invalid price: %v", err)
+	}
+
 	result, err := s.queries.CreateProduct(ctx, repository.CreateProductParams{
 		CategoryID:  int32(req.CategoryID),
 		Name:        req.Name,
 		Slug:        req.Slug,
-		Description: sql.NullString{String: req.Description, Valid: req.Description != ""},
-		Price:       req.Price,
-		ImageUrl:    sql.NullString{String: req.ImageURL, Valid: req.ImageURL != ""},
-		ThumbUrl:    sql.NullString{String: req.ThumbURL, Valid: req.ThumbURL != ""},
+		Description: req.Description,
+		Price:       price,
+		PriceSale:   priceSale,
+		ImageUrl:    req.ImageURL,
+		ThumbUrl:    req.ThumbURL,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, err
-	}
-
-	return s.GetProduct(ctx, int(id))
+	return s.GetProduct(ctx, int(result))
 }
 
 func (s *ProductService) GetProduct(ctx context.Context, id int) (*model.Product, error) {
 	product, err := s.queries.GetProduct(ctx, int32(id))
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errors.New("product not found")
 		}
 		return nil, err
+	}
+
+	var price float64
+	if err := product.Price.Scan(&price); err != nil {
+		return nil, fmt.Errorf("invalid price: %v", err)
+	}
+
+	var priceSale float64
+	if product.PriceSale.Valid {
+		if err := product.PriceSale.Scan(&priceSale); err != nil {
+			return nil, fmt.Errorf("invalid price_sale: %v", err)
+		}
 	}
 
 	return &model.Product{
@@ -57,10 +81,11 @@ func (s *ProductService) GetProduct(ctx context.Context, id int) (*model.Product
 		CategoryID:   int(product.CategoryID),
 		Name:         product.Name,
 		Slug:         product.Slug,
-		Description:  product.Description.String,
-		Price:        product.Price,
-		ImageURL:     product.ImageUrl.String,
-		ThumbURL:     product.ThumbUrl.String,
+		Description:  product.Description,
+		Price:        price,
+		PriceSale:    priceSale,
+		ImageURL:     product.ImageUrl,
+		ThumbURL:     product.ThumbUrl,
 		CreatedAt:    product.CreatedAt.Time,
 		CategoryName: product.CategoryName,
 		CategorySlug: product.CategorySlug,
@@ -70,10 +95,22 @@ func (s *ProductService) GetProduct(ctx context.Context, id int) (*model.Product
 func (s *ProductService) GetProductBySlug(ctx context.Context, slug string) (*model.Product, error) {
 	product, err := s.queries.GetProductBySlug(ctx, slug)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errors.New("product not found")
 		}
 		return nil, err
+	}
+
+	var price float64
+	if err := product.Price.Scan(&price); err != nil {
+		return nil, fmt.Errorf("invalid price: %v", err)
+	}
+
+	var priceSale float64
+	if product.PriceSale.Valid {
+		if err := product.PriceSale.Scan(&priceSale); err != nil {
+			return nil, fmt.Errorf("invalid price_sale: %v", err)
+		}
 	}
 
 	return &model.Product{
@@ -81,84 +118,149 @@ func (s *ProductService) GetProductBySlug(ctx context.Context, slug string) (*mo
 		CategoryID:   int(product.CategoryID),
 		Name:         product.Name,
 		Slug:         product.Slug,
-		Description:  product.Description.String,
-		Price:        product.Price,
-		ImageURL:     product.ImageUrl.String,
-		ThumbURL:     product.ThumbUrl.String,
+		Description:  product.Description,
+		Price:        price,
+		PriceSale:    priceSale,
+		ImageURL:     product.ImageUrl,
+		ThumbURL:     product.ThumbUrl,
 		CreatedAt:    product.CreatedAt.Time,
 		CategoryName: product.CategoryName,
 		CategorySlug: product.CategorySlug,
 	}, nil
 }
 
-func (s *ProductService) ListProducts(ctx context.Context) ([]model.Product, error) {
-	products, err := s.queries.ListProducts(ctx)
-	if err != nil {
-		return nil, err
+func (s *ProductService) ListProducts(ctx context.Context, pagination model.Pagination) ([]model.Product, int64, error) {
+	params := repository.ListProductsParams{
+		Limit:  int32(pagination.GetLimit()),
+		Offset: int32(pagination.GetOffset()),
 	}
 
+	fmt.Println("pagination", params)
+	products, err := s.queries.ListProducts(ctx, params)
+	fmt.Println("products", len(products))
+
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var totalCount int64
+	if len(products) > 0 {
+		totalCount = products[0].TotalCount
+	}
+
+	// Convert repository products to model products
 	result := make([]model.Product, len(products))
 	for i, p := range products {
+		var price float64
+		if err := p.Price.Scan(&price); err != nil {
+			return nil, 0, fmt.Errorf("invalid price: %v", err)
+		}
+
+		var priceSale float64
+		if p.PriceSale.Valid {
+			if err := p.PriceSale.Scan(&priceSale); err != nil {
+				return nil, 0, fmt.Errorf("invalid price_sale: %v", err)
+			}
+		}
+
 		result[i] = model.Product{
 			ID:           int(p.ID),
 			CategoryID:   int(p.CategoryID),
 			Name:         p.Name,
 			Slug:         p.Slug,
-			Description:  p.Description.String,
-			Price:        p.Price,
-			ImageURL:     p.ImageUrl.String,
-			ThumbURL:     p.ThumbUrl.String,
+			Description:  p.Description,
+			Price:        price,
+			PriceSale:    priceSale,
+			ImageURL:     p.ImageUrl,
+			ThumbURL:     p.ThumbUrl,
 			CreatedAt:    p.CreatedAt.Time,
 			CategoryName: p.CategoryName,
 			CategorySlug: p.CategorySlug,
 		}
 	}
 
-	return result, nil
+	return result, totalCount, nil
 }
 
-func (s *ProductService) ListProductsByCategory(ctx context.Context, categoryID int, categorySlug string) ([]model.Product, error) {
-	products, err := s.queries.ListProductsByCategory(ctx, repository.ListProductsByCategoryParams{
-		ID:   int32(categoryID),
-		Slug: categorySlug,
-	})
-	if err != nil {
-		return nil, err
+func (s *ProductService) ListProductsByCategory(ctx context.Context, categoryID int64, categorySlug string, pagination model.Pagination) ([]model.Product, int64, error) {
+	params := repository.ListProductsByCategoryParams{
+		ID:     int32(categoryID),
+		Slug:   categorySlug,
+		Limit:  int32(pagination.GetLimit()),
+		Offset: int32(pagination.GetOffset()),
 	}
 
+	products, err := s.queries.ListProductsByCategory(ctx, params)
+	fmt.Println("products", products)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var totalCount int64
+	if len(products) > 0 {
+		totalCount = products[0].TotalCount
+	}
+
+	// Convert repository products to model products
 	result := make([]model.Product, len(products))
 	for i, p := range products {
+		var price float64
+		if err := p.Price.Scan(&price); err != nil {
+			return nil, 0, fmt.Errorf("invalid price: %v", err)
+		}
+
+		var priceSale float64
+		if p.PriceSale.Valid {
+			if err := p.PriceSale.Scan(&priceSale); err != nil {
+				return nil, 0, fmt.Errorf("invalid price_sale: %v", err)
+			}
+		}
+
 		result[i] = model.Product{
 			ID:           int(p.ID),
 			CategoryID:   int(p.CategoryID),
 			Name:         p.Name,
 			Slug:         p.Slug,
-			Description:  p.Description.String,
-			Price:        p.Price,
-			ImageURL:     p.ImageUrl.String,
-			ThumbURL:     p.ThumbUrl.String,
+			Description:  p.Description,
+			Price:        price,
+			PriceSale:    priceSale,
+			ImageURL:     p.ImageUrl,
+			ThumbURL:     p.ThumbUrl,
 			CreatedAt:    p.CreatedAt.Time,
 			CategoryName: p.CategoryName,
 			CategorySlug: p.CategorySlug,
 		}
 	}
 
-	return result, nil
+	return result, totalCount, nil
 }
 
 func (s *ProductService) UpdateProduct(ctx context.Context, id int, req model.UpdateProductRequest) (*model.Product, error) {
+	var priceSale pgtype.Numeric
+	if req.PriceSale != 0 {
+		if err := priceSale.Scan(fmt.Sprintf("%.2f", req.PriceSale)); err != nil {
+			return nil, fmt.Errorf("invalid price_sale: %v", err)
+		}
+	}
+
+	var price pgtype.Numeric
+	if err := price.Scan(req.Price); err != nil {
+		return nil, fmt.Errorf("invalid price: %v", err)
+	}
+
 	err := s.queries.UpdateProduct(ctx, repository.UpdateProductParams{
 		ID:          int32(id),
 		CategoryID:  int32(req.CategoryID),
 		Name:        req.Name,
 		Slug:        req.Slug,
-		Description: sql.NullString{String: req.Description, Valid: req.Description != ""},
-		Price:       req.Price,
-		ImageUrl:    sql.NullString{String: req.ImageURL, Valid: req.ImageURL != ""},
-		ThumbUrl:    sql.NullString{String: req.ThumbURL, Valid: req.ThumbURL != ""},
+		Description: req.Description,
+		Price:       price,
+		PriceSale:   priceSale,
+		ImageUrl:    req.ImageURL,
+		ThumbUrl:    req.ThumbURL,
 	})
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errors.New("product not found")
 		}
 		return nil, err
@@ -170,7 +272,7 @@ func (s *ProductService) UpdateProduct(ctx context.Context, id int, req model.Up
 func (s *ProductService) DeleteProduct(ctx context.Context, id int) error {
 	err := s.queries.DeleteProduct(ctx, int32(id))
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return errors.New("product not found")
 		}
 		return err

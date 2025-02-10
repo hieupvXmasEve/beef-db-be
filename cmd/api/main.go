@@ -21,18 +21,18 @@ func main() {
 		log.Printf("Warning: .env file not found")
 	}
 
-	// Initialize database connection
-	db, err := config.NewDBConnection()
+	// Initialize database connection pool
+	pool, err := config.NewDBPool()
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("Failed to create database pool: %v", err)
 	}
-	defer db.Close()
+	defer pool.Close()
 
 	// Initialize services
-	userService := service.NewUserService(db)
-	categoryService := service.NewCategoryService(db)
-	productService := service.NewProductService(db)
-	healthHandler := handler.NewHealthHandler(db)
+	userService := service.NewUserService(pool)
+	categoryService := service.NewCategoryService(pool)
+	productService := service.NewProductService(pool)
+	healthHandler := handler.NewHealthHandler(pool)
 
 	// Initialize handlers
 	userHandler := handler.NewUserHandler(userService)
@@ -55,9 +55,9 @@ func main() {
 	// Routes
 	r.Route("/api", func(r chi.Router) {
 		// Public routes
-		r.Post("/signup", userHandler.SignUp)
-		r.Post("/login", userHandler.Login)
-		r.Post("/logout", userHandler.Logout)
+		r.Post("/auth/signup", userHandler.SignUp)
+		r.Post("/auth/login", userHandler.Login)
+		r.Post("/auth/logout", userHandler.Logout)
 		r.Get("/users/me", userHandler.GetMe) // Public endpoint for getting current user
 
 		// Public category routes

@@ -7,75 +7,81 @@ package repository
 
 import (
 	"context"
-	"database/sql"
-	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createCategory = `-- name: CreateCategory :execresult
-INSERT INTO
-    categories (name, slug, description, image_url)
-VALUES
-    (?, ?, ?, ?)
+const createCategory = `-- name: CreateCategory :one
+INSERT INTO categories (name, slug, description, image_url)
+VALUES ($1, $2, $3, $4)
+RETURNING id
 `
 
 type CreateCategoryParams struct {
 	Name        string
 	Slug        string
-	Description sql.NullString
-	ImageUrl    sql.NullString
+	Description pgtype.Text
+	ImageUrl    pgtype.Text
 }
 
-func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, createCategory,
+func (q *Queries) CreateCategory(ctx context.Context, arg CreateCategoryParams) (int32, error) {
+	row := q.db.QueryRow(ctx, createCategory,
 		arg.Name,
 		arg.Slug,
 		arg.Description,
 		arg.ImageUrl,
 	)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
 }
 
-const createProduct = `-- name: CreateProduct :execresult
-INSERT INTO
-    products (
-        category_id,
-        name,
-        slug,
-        description,
-        price,
-        image_url,
-        thumb_url
-    )
-VALUES
-    (?, ?, ?, ?, ?, ?, ?)
+const createProduct = `-- name: CreateProduct :one
+INSERT INTO products (
+    category_id,
+    name,
+    slug,
+    description,
+    price,
+    price_sale,
+    image_url,
+    thumb_url
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id
 `
 
 type CreateProductParams struct {
 	CategoryID  int32
 	Name        string
 	Slug        string
-	Description sql.NullString
-	Price       float64
-	ImageUrl    sql.NullString
-	ThumbUrl    sql.NullString
+	Description string
+	Price       pgtype.Numeric
+	PriceSale   pgtype.Numeric
+	ImageUrl    string
+	ThumbUrl    string
 }
 
-func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, createProduct,
+func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (int32, error) {
+	row := q.db.QueryRow(ctx, createProduct,
 		arg.CategoryID,
 		arg.Name,
 		arg.Slug,
 		arg.Description,
 		arg.Price,
+		arg.PriceSale,
 		arg.ImageUrl,
 		arg.ThumbUrl,
 	)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
 }
 
-const createUser = `-- name: CreateUser :execresult
-INSERT INTO
-    users (email, password)
-VALUES
-    (?, ?)
+const createUser = `-- name: CreateUser :one
+INSERT INTO users (email, password)
+VALUES ($1, $2)
+RETURNING id
 `
 
 type CreateUserParams struct {
@@ -83,53 +89,51 @@ type CreateUserParams struct {
 	Password string
 }
 
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (sql.Result, error) {
-	return q.db.ExecContext(ctx, createUser, arg.Email, arg.Password)
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, error) {
+	row := q.db.QueryRow(ctx, createUser, arg.Email, arg.Password)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
 const deleteCategory = `-- name: DeleteCategory :exec
 DELETE FROM categories
-WHERE
-    id = ?
+WHERE id = $1
 `
 
 func (q *Queries) DeleteCategory(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteCategory, id)
+	_, err := q.db.Exec(ctx, deleteCategory, id)
 	return err
 }
 
 const deleteProduct = `-- name: DeleteProduct :exec
 DELETE FROM products
-WHERE
-    id = ?
+WHERE id = $1
 `
 
 func (q *Queries) DeleteProduct(ctx context.Context, id int32) error {
-	_, err := q.db.ExecContext(ctx, deleteProduct, id)
+	_, err := q.db.Exec(ctx, deleteProduct, id)
 	return err
 }
 
-const deleteUser = `-- name: DeleteUser :execresult
+const deleteUser = `-- name: DeleteUser :exec
 DELETE FROM users
-WHERE
-    id = ?
+WHERE id = $1
 `
 
-func (q *Queries) DeleteUser(ctx context.Context, id int64) (sql.Result, error) {
-	return q.db.ExecContext(ctx, deleteUser, id)
+func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, deleteUser, id)
+	return err
 }
 
 const getCategory = `-- name: GetCategory :one
-SELECT
-    id, name, slug, description, image_url, created_at
-FROM
-    categories
-WHERE
-    id = ?
+SELECT id, name, slug, description, image_url, created_at
+FROM categories
+WHERE id = $1
 `
 
 func (q *Queries) GetCategory(ctx context.Context, id int32) (Category, error) {
-	row := q.db.QueryRowContext(ctx, getCategory, id)
+	row := q.db.QueryRow(ctx, getCategory, id)
 	var i Category
 	err := row.Scan(
 		&i.ID,
@@ -143,16 +147,13 @@ func (q *Queries) GetCategory(ctx context.Context, id int32) (Category, error) {
 }
 
 const getCategoryBySlug = `-- name: GetCategoryBySlug :one
-SELECT
-    id, name, slug, description, image_url, created_at
-FROM
-    categories
-WHERE
-    slug = ?
+SELECT id, name, slug, description, image_url, created_at
+FROM categories
+WHERE slug = $1
 `
 
 func (q *Queries) GetCategoryBySlug(ctx context.Context, slug string) (Category, error) {
-	row := q.db.QueryRowContext(ctx, getCategoryBySlug, slug)
+	row := q.db.QueryRow(ctx, getCategoryBySlug, slug)
 	var i Category
 	err := row.Scan(
 		&i.ID,
@@ -167,14 +168,21 @@ func (q *Queries) GetCategoryBySlug(ctx context.Context, slug string) (Category,
 
 const getProduct = `-- name: GetProduct :one
 SELECT
-    p.id, p.category_id, p.name, p.slug, p.description, p.price, p.image_url, p.thumb_url, p.created_at,
+    p.id,
+    p.category_id,
+    p.name,
+    p.slug,
+    p.description,
+    p.price,
+    p.price_sale,
+    p.image_url,
+    p.thumb_url,
+    p.created_at,
     c.name as category_name,
     c.slug as category_slug
-FROM
-    products p
-    JOIN categories c ON p.category_id = c.id
-WHERE
-    p.id = ?
+FROM products p
+JOIN categories c ON p.category_id = c.id
+WHERE p.id = $1
 `
 
 type GetProductRow struct {
@@ -182,17 +190,18 @@ type GetProductRow struct {
 	CategoryID   int32
 	Name         string
 	Slug         string
-	Description  sql.NullString
-	Price        float64
-	ImageUrl     sql.NullString
-	ThumbUrl     sql.NullString
-	CreatedAt    sql.NullTime
+	Description  string
+	Price        pgtype.Numeric
+	PriceSale    pgtype.Numeric
+	ImageUrl     string
+	ThumbUrl     string
+	CreatedAt    pgtype.Timestamp
 	CategoryName string
 	CategorySlug string
 }
 
 func (q *Queries) GetProduct(ctx context.Context, id int32) (GetProductRow, error) {
-	row := q.db.QueryRowContext(ctx, getProduct, id)
+	row := q.db.QueryRow(ctx, getProduct, id)
 	var i GetProductRow
 	err := row.Scan(
 		&i.ID,
@@ -201,6 +210,7 @@ func (q *Queries) GetProduct(ctx context.Context, id int32) (GetProductRow, erro
 		&i.Slug,
 		&i.Description,
 		&i.Price,
+		&i.PriceSale,
 		&i.ImageUrl,
 		&i.ThumbUrl,
 		&i.CreatedAt,
@@ -212,14 +222,21 @@ func (q *Queries) GetProduct(ctx context.Context, id int32) (GetProductRow, erro
 
 const getProductBySlug = `-- name: GetProductBySlug :one
 SELECT
-    p.id, p.category_id, p.name, p.slug, p.description, p.price, p.image_url, p.thumb_url, p.created_at,
+    p.id,
+    p.category_id,
+    p.name,
+    p.slug,
+    p.description,
+    p.price,
+    p.price_sale,
+    p.image_url,
+    p.thumb_url,
+    p.created_at,
     c.name as category_name,
     c.slug as category_slug
-FROM
-    products p
-    JOIN categories c ON p.category_id = c.id
-WHERE
-    p.slug = ?
+FROM products p
+JOIN categories c ON p.category_id = c.id
+WHERE p.slug = $1
 `
 
 type GetProductBySlugRow struct {
@@ -227,17 +244,18 @@ type GetProductBySlugRow struct {
 	CategoryID   int32
 	Name         string
 	Slug         string
-	Description  sql.NullString
-	Price        float64
-	ImageUrl     sql.NullString
-	ThumbUrl     sql.NullString
-	CreatedAt    sql.NullTime
+	Description  string
+	Price        pgtype.Numeric
+	PriceSale    pgtype.Numeric
+	ImageUrl     string
+	ThumbUrl     string
+	CreatedAt    pgtype.Timestamp
 	CategoryName string
 	CategorySlug string
 }
 
 func (q *Queries) GetProductBySlug(ctx context.Context, slug string) (GetProductBySlugRow, error) {
-	row := q.db.QueryRowContext(ctx, getProductBySlug, slug)
+	row := q.db.QueryRow(ctx, getProductBySlug, slug)
 	var i GetProductBySlugRow
 	err := row.Scan(
 		&i.ID,
@@ -246,6 +264,7 @@ func (q *Queries) GetProductBySlug(ctx context.Context, slug string) (GetProduct
 		&i.Slug,
 		&i.Description,
 		&i.Price,
+		&i.PriceSale,
 		&i.ImageUrl,
 		&i.ThumbUrl,
 		&i.CreatedAt,
@@ -256,21 +275,13 @@ func (q *Queries) GetProductBySlug(ctx context.Context, slug string) (GetProduct
 }
 
 const getUser = `-- name: GetUser :one
-SELECT
-    id,
-    email,
-    password,
-    role,
-    created_at,
-    updated_at
-FROM
-    users
-WHERE
-    id = ?
+SELECT id, email, password, role, created_at, updated_at
+FROM users
+WHERE id = $1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
-	row := q.db.QueryRowContext(ctx, getUser, id)
+	row := q.db.QueryRow(ctx, getUser, id)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -284,21 +295,13 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT
-    id,
-    email,
-    password,
-    role,
-    created_at,
-    updated_at
-FROM
-    users
-WHERE
-    email = ?
+SELECT id, email, password, role, created_at, updated_at
+FROM users
+WHERE email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
-	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -312,30 +315,25 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserCount = `-- name: GetUserCount :one
-SELECT
-    COUNT(*)
-FROM
-    users
+SELECT COUNT(*)
+FROM users
 `
 
 func (q *Queries) GetUserCount(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getUserCount)
+	row := q.db.QueryRow(ctx, getUserCount)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
 }
 
 const listCategories = `-- name: ListCategories :many
-SELECT
-    id, name, slug, description, image_url, created_at
-FROM
-    categories
-ORDER BY
-    created_at DESC
+SELECT id, name, slug, description, image_url, created_at
+FROM categories
+ORDER BY created_at DESC
 `
 
 func (q *Queries) ListCategories(ctx context.Context) ([]Category, error) {
-	rows, err := q.db.QueryContext(ctx, listCategories)
+	rows, err := q.db.Query(ctx, listCategories)
 	if err != nil {
 		return nil, err
 	}
@@ -355,9 +353,6 @@ func (q *Queries) ListCategories(ctx context.Context) ([]Category, error) {
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -365,33 +360,54 @@ func (q *Queries) ListCategories(ctx context.Context) ([]Category, error) {
 }
 
 const listProducts = `-- name: ListProducts :many
+WITH total AS (
+    SELECT COUNT(*) as count
+    FROM products
+)
 SELECT
-    p.id, p.category_id, p.name, p.slug, p.description, p.price, p.image_url, p.thumb_url, p.created_at,
+    p.id,
+    p.category_id,
+    p.name,
+    p.slug,
+    p.description,
+    p.price,
+    p.price_sale,
+    p.image_url,
+    p.thumb_url,
+    p.created_at,
     c.name as category_name,
-    c.slug as category_slug
-FROM
-    products p
-    JOIN categories c ON p.category_id = c.id
-ORDER BY
-    p.created_at DESC
+    c.slug as category_slug,
+    total.count as total_count
+FROM products p
+JOIN categories c ON p.category_id = c.id
+CROSS JOIN total
+ORDER BY p.created_at DESC
+LIMIT $1 OFFSET $2
 `
+
+type ListProductsParams struct {
+	Limit  int32
+	Offset int32
+}
 
 type ListProductsRow struct {
 	ID           int32
 	CategoryID   int32
 	Name         string
 	Slug         string
-	Description  sql.NullString
-	Price        float64
-	ImageUrl     sql.NullString
-	ThumbUrl     sql.NullString
-	CreatedAt    sql.NullTime
+	Description  string
+	Price        pgtype.Numeric
+	PriceSale    pgtype.Numeric
+	ImageUrl     string
+	ThumbUrl     string
+	CreatedAt    pgtype.Timestamp
 	CategoryName string
 	CategorySlug string
+	TotalCount   int64
 }
 
-func (q *Queries) ListProducts(ctx context.Context) ([]ListProductsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listProducts)
+func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]ListProductsRow, error) {
+	rows, err := q.db.Query(ctx, listProducts, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -406,18 +422,17 @@ func (q *Queries) ListProducts(ctx context.Context) ([]ListProductsRow, error) {
 			&i.Slug,
 			&i.Description,
 			&i.Price,
+			&i.PriceSale,
 			&i.ImageUrl,
 			&i.ThumbUrl,
 			&i.CreatedAt,
 			&i.CategoryName,
 			&i.CategorySlug,
+			&i.TotalCount,
 		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -426,23 +441,39 @@ func (q *Queries) ListProducts(ctx context.Context) ([]ListProductsRow, error) {
 }
 
 const listProductsByCategory = `-- name: ListProductsByCategory :many
-SELECT
-    p.id, p.category_id, p.name, p.slug, p.description, p.price, p.image_url, p.thumb_url, p.created_at,
-    c.name as category_name,
-    c.slug as category_slug
-FROM
-    products p
+WITH total AS (
+    SELECT COUNT(*) as count
+    FROM products p
     JOIN categories c ON p.category_id = c.id
-WHERE
-    c.id = ?
-    OR c.slug = ?
-ORDER BY
-    p.created_at DESC
+    WHERE c.id = $1 OR c.slug = $2
+)
+SELECT
+    p.id,
+    p.category_id,
+    p.name,
+    p.slug,
+    p.description,
+    p.price,
+    p.price_sale,
+    p.image_url,
+    p.thumb_url,
+    p.created_at,
+    c.name as category_name,
+    c.slug as category_slug,
+    total.count as total_count
+FROM products p
+JOIN categories c ON p.category_id = c.id
+CROSS JOIN total
+WHERE c.id = $1 OR c.slug = $2
+ORDER BY p.created_at DESC
+LIMIT $3 OFFSET $4
 `
 
 type ListProductsByCategoryParams struct {
-	ID   int32
-	Slug string
+	ID     int32
+	Slug   string
+	Limit  int32
+	Offset int32
 }
 
 type ListProductsByCategoryRow struct {
@@ -450,17 +481,24 @@ type ListProductsByCategoryRow struct {
 	CategoryID   int32
 	Name         string
 	Slug         string
-	Description  sql.NullString
-	Price        float64
-	ImageUrl     sql.NullString
-	ThumbUrl     sql.NullString
-	CreatedAt    sql.NullTime
+	Description  string
+	Price        pgtype.Numeric
+	PriceSale    pgtype.Numeric
+	ImageUrl     string
+	ThumbUrl     string
+	CreatedAt    pgtype.Timestamp
 	CategoryName string
 	CategorySlug string
+	TotalCount   int64
 }
 
 func (q *Queries) ListProductsByCategory(ctx context.Context, arg ListProductsByCategoryParams) ([]ListProductsByCategoryRow, error) {
-	rows, err := q.db.QueryContext(ctx, listProductsByCategory, arg.ID, arg.Slug)
+	rows, err := q.db.Query(ctx, listProductsByCategory,
+		arg.ID,
+		arg.Slug,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -475,18 +513,17 @@ func (q *Queries) ListProductsByCategory(ctx context.Context, arg ListProductsBy
 			&i.Slug,
 			&i.Description,
 			&i.Price,
+			&i.PriceSale,
 			&i.ImageUrl,
 			&i.ThumbUrl,
 			&i.CreatedAt,
 			&i.CategoryName,
 			&i.CategorySlug,
+			&i.TotalCount,
 		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -495,26 +532,20 @@ func (q *Queries) ListProductsByCategory(ctx context.Context, arg ListProductsBy
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT
-    id,
-    email,
-    role,
-    created_at,
-    updated_at
-FROM
-    users
+SELECT id, email, role, created_at, updated_at
+FROM users
 `
 
 type ListUsersRow struct {
 	ID        int64
 	Email     string
-	Role      UsersRole
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	Role      string
+	CreatedAt pgtype.Timestamp
+	UpdatedAt pgtype.Timestamp
 }
 
 func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
-	rows, err := q.db.QueryContext(ctx, listUsers)
+	rows, err := q.db.Query(ctx, listUsers)
 	if err != nil {
 		return nil, err
 	}
@@ -533,9 +564,6 @@ func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -544,25 +572,20 @@ func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 
 const updateCategory = `-- name: UpdateCategory :exec
 UPDATE categories
-SET
-    name = ?,
-    slug = ?,
-    description = ?,
-    image_url = ?
-WHERE
-    id = ?
+SET name = $1, slug = $2, description = $3, image_url = $4
+WHERE id = $5
 `
 
 type UpdateCategoryParams struct {
 	Name        string
 	Slug        string
-	Description sql.NullString
-	ImageUrl    sql.NullString
+	Description pgtype.Text
+	ImageUrl    pgtype.Text
 	ID          int32
 }
 
 func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) error {
-	_, err := q.db.ExecContext(ctx, updateCategory,
+	_, err := q.db.Exec(ctx, updateCategory,
 		arg.Name,
 		arg.Slug,
 		arg.Description,
@@ -575,35 +598,37 @@ func (q *Queries) UpdateCategory(ctx context.Context, arg UpdateCategoryParams) 
 const updateProduct = `-- name: UpdateProduct :exec
 UPDATE products
 SET
-    category_id = ?,
-    name = ?,
-    slug = ?,
-    description = ?,
-    price = ?,
-    image_url = ?,
-    thumb_url = ?
-WHERE
-    id = ?
+    category_id = $1,
+    name = $2,
+    slug = $3,
+    description = $4,
+    price = $5,
+    price_sale = $6,
+    image_url = $7,
+    thumb_url = $8
+WHERE id = $9
 `
 
 type UpdateProductParams struct {
 	CategoryID  int32
 	Name        string
 	Slug        string
-	Description sql.NullString
-	Price       float64
-	ImageUrl    sql.NullString
-	ThumbUrl    sql.NullString
+	Description string
+	Price       pgtype.Numeric
+	PriceSale   pgtype.Numeric
+	ImageUrl    string
+	ThumbUrl    string
 	ID          int32
 }
 
 func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) error {
-	_, err := q.db.ExecContext(ctx, updateProduct,
+	_, err := q.db.Exec(ctx, updateProduct,
 		arg.CategoryID,
 		arg.Name,
 		arg.Slug,
 		arg.Description,
 		arg.Price,
+		arg.PriceSale,
 		arg.ImageUrl,
 		arg.ThumbUrl,
 		arg.ID,
@@ -613,10 +638,8 @@ func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) er
 
 const updateUser = `-- name: UpdateUser :exec
 UPDATE users
-SET
-    email = ?
-WHERE
-    id = ?
+SET email = $1
+WHERE id = $2
 `
 
 type UpdateUserParams struct {
@@ -625,6 +648,6 @@ type UpdateUserParams struct {
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
-	_, err := q.db.ExecContext(ctx, updateUser, arg.Email, arg.ID)
+	_, err := q.db.Exec(ctx, updateUser, arg.Email, arg.ID)
 	return err
 }

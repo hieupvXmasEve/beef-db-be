@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"os"
 	"time"
-
-	_ "github.com/go-sql-driver/mysql"
 )
 
 type DBConfig struct {
@@ -86,4 +84,4 @@ func CheckDBConnection(db *sql.DB) (*DBStatus, error) {
 	status.Status = "healthy"
 	status.Message = "Database connection is healthy"
 	return status, nil
-} 
+}

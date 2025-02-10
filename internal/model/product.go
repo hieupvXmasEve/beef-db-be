@@ -28,39 +28,42 @@ type UpdateCategoryRequest struct {
 	ImageURL    string `json:"image_url"`
 }
 
-// Product represents a product
+// Product represents a product in the system
 type Product struct {
 	ID           int       `json:"id"`
 	CategoryID   int       `json:"category_id"`
 	Name         string    `json:"name"`
 	Slug         string    `json:"slug"`
-	Description  string    `json:"description,omitempty"`
+	Description  string    `json:"description"`
 	Price        float64   `json:"price"`
-	ImageURL     string    `json:"image_url,omitempty"`
-	ThumbURL     string    `json:"thumb_url,omitempty"`
+	PriceSale    float64   `json:"price_sale,omitempty"`
+	ImageURL     string    `json:"image_url"`
+	ThumbURL     string    `json:"thumb_url"`
 	CreatedAt    time.Time `json:"created_at"`
 	CategoryName string    `json:"category_name"`
 	CategorySlug string    `json:"category_slug"`
 }
 
-// CreateProductRequest represents the request to create a product
+// CreateProductRequest represents the request body for product creation
 type CreateProductRequest struct {
 	CategoryID  int     `json:"category_id" validate:"required"`
 	Name        string  `json:"name" validate:"required"`
 	Slug        string  `json:"slug" validate:"required"`
 	Description string  `json:"description"`
 	Price       float64 `json:"price" validate:"required,gt=0"`
+	PriceSale   float64 `json:"price_sale,omitempty" validate:"omitempty,gtefield=0"`
 	ImageURL    string  `json:"image_url"`
 	ThumbURL    string  `json:"thumb_url"`
 }
 
-// UpdateProductRequest represents the request to update a product
+// UpdateProductRequest represents the request body for product update
 type UpdateProductRequest struct {
 	CategoryID  int     `json:"category_id" validate:"required"`
 	Name        string  `json:"name" validate:"required"`
 	Slug        string  `json:"slug" validate:"required"`
 	Description string  `json:"description"`
 	Price       float64 `json:"price" validate:"required,gt=0"`
+	PriceSale   float64 `json:"price_sale,omitempty" validate:"omitempty,gtefield=0"`
 	ImageURL    string  `json:"image_url"`
 	ThumbURL    string  `json:"thumb_url"`
 }

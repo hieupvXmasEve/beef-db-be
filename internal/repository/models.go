@@ -5,69 +5,24 @@
 package repository
 
 import (
-	"database/sql"
-	"database/sql/driver"
-	"fmt"
-	"time"
+	"github.com/jackc/pgx/v5/pgtype"
 )
-
-type UsersRole string
-
-const (
-	UsersRoleAdmin UsersRole = "admin"
-	UsersRoleUser  UsersRole = "user"
-)
-
-func (e *UsersRole) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = UsersRole(s)
-	case string:
-		*e = UsersRole(s)
-	default:
-		return fmt.Errorf("unsupported scan type for UsersRole: %T", src)
-	}
-	return nil
-}
-
-type NullUsersRole struct {
-	UsersRole UsersRole
-	Valid     bool // Valid is true if UsersRole is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullUsersRole) Scan(value interface{}) error {
-	if value == nil {
-		ns.UsersRole, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.UsersRole.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullUsersRole) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.UsersRole), nil
-}
 
 type BlogPost struct {
 	ID        int32
 	Title     string
 	Content   string
-	ImageUrl  sql.NullString
-	CreatedAt sql.NullTime
+	ImageUrl  pgtype.Text
+	CreatedAt pgtype.Timestamp
 }
 
 type Category struct {
 	ID          int32
 	Name        string
 	Slug        string
-	Description sql.NullString
-	ImageUrl    sql.NullString
-	CreatedAt   sql.NullTime
+	Description pgtype.Text
+	ImageUrl    pgtype.Text
+	CreatedAt   pgtype.Timestamp
 }
 
 type ContactMessage struct {
@@ -75,7 +30,7 @@ type ContactMessage struct {
 	Name      string
 	Email     string
 	Message   string
-	CreatedAt sql.NullTime
+	CreatedAt pgtype.Timestamp
 }
 
 type Product struct {
@@ -83,20 +38,21 @@ type Product struct {
 	CategoryID  int32
 	Name        string
 	Slug        string
-	Description sql.NullString
-	Price       float64
-	ImageUrl    sql.NullString
-	ThumbUrl    sql.NullString
-	CreatedAt   sql.NullTime
+	Description string
+	Price       pgtype.Numeric
+	PriceSale   pgtype.Numeric
+	ImageUrl    string
+	ThumbUrl    string
+	CreatedAt   pgtype.Timestamp
 }
 
 type User struct {
 	ID        int64
 	Email     string
 	Password  string
-	Role      UsersRole
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	Role      string
+	CreatedAt pgtype.Timestamp
+	UpdatedAt pgtype.Timestamp
 }
 
 type WebsiteSetting struct {

@@ -2,12 +2,13 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 
 	"beef-db-be/internal/model"
@@ -16,49 +17,70 @@ import (
 
 type UserService struct {
 	queries *repository.Queries
-	db      *sql.DB
+	pool    *pgxpool.Pool
 }
 
-func NewUserService(db *sql.DB) *UserService {
+func NewUserService(pool *pgxpool.Pool) *UserService {
 	return &UserService{
-		queries: repository.New(db),
-		db:      db,
+		queries: repository.New(pool),
+		pool:    pool,
 	}
 }
 
+func (s *UserService) SignUp(ctx context.Context, req model.SignUpRequest) (*model.User, error) {
+	// Check if user already exists
+	_, err := s.queries.GetUserByEmail(ctx, req.Email)
+	if err == nil {
+		return nil, errors.New("email already exists")
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+
+	// Hash password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create user
+	result, err := s.queries.CreateUser(ctx, repository.CreateUserParams{
+		Email:    req.Email,
+		Password: string(hashedPassword),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return s.GetUser(ctx, result)
+}
+
 func (s *UserService) Login(ctx context.Context, req model.LoginRequest) (*model.LoginResponse, error) {
+	// Get user by email
 	user, err := s.queries.GetUserByEmail(ctx, req.Email)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, errors.New("invalid credentials")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New("invalid email or password")
 		}
 		return nil, err
 	}
 
+	// Check password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		return nil, errors.New("invalid credentials")
+		return nil, errors.New("invalid email or password")
 	}
 
 	// Generate JWT token
-	token := jwt.New(jwt.SigningMethodHS256)
-	claims := token.Claims.(jwt.MapClaims)
-	claims["user_id"] = user.ID
-	claims["email"] = user.Email
-	claims["role"] = user.Role
-	claims["exp"] = time.Now().Add(time.Hour * time.Duration(72)).Unix()
-
-	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	token, err := generateJWT(user.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	return &model.LoginResponse{
-		Token: tokenString,
+		Token: token,
 		User: model.User{
 			GVA_MODEL: model.GVA_MODEL{
-				ID:        user.ID,
-				CreatedAt: user.CreatedAt,
-				UpdatedAt: user.UpdatedAt,
+				ID: user.ID,
 			},
 			Email: user.Email,
 			Role:  model.Role(user.Role),
@@ -69,7 +91,7 @@ func (s *UserService) Login(ctx context.Context, req model.LoginRequest) (*model
 func (s *UserService) GetUser(ctx context.Context, id int64) (*model.User, error) {
 	user, err := s.queries.GetUser(ctx, id)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, errors.New("user not found")
 		}
 		return nil, err
@@ -77,9 +99,7 @@ func (s *UserService) GetUser(ctx context.Context, id int64) (*model.User, error
 
 	return &model.User{
 		GVA_MODEL: model.GVA_MODEL{
-			ID:        user.ID,
-			CreatedAt: user.CreatedAt,
-			UpdatedAt: user.UpdatedAt,
+			ID: user.ID,
 		},
 		Email: user.Email,
 		Role:  model.Role(user.Role),
@@ -96,9 +116,7 @@ func (s *UserService) ListUsers(ctx context.Context) ([]model.User, error) {
 	for i, user := range users {
 		result[i] = model.User{
 			GVA_MODEL: model.GVA_MODEL{
-				ID:        user.ID,
-				CreatedAt: user.CreatedAt,
-				UpdatedAt: user.UpdatedAt,
+				ID: user.ID,
 			},
 			Email: user.Email,
 			Role:  model.Role(user.Role),
@@ -108,53 +126,30 @@ func (s *UserService) ListUsers(ctx context.Context) ([]model.User, error) {
 	return result, nil
 }
 
-// SignUp handles user registration with default user role
-func (s *UserService) SignUp(ctx context.Context, req model.SignUpRequest) (*model.User, error) {
-	// Check if email already exists
-	_, err := s.queries.GetUserByEmail(ctx, req.Email)
-	if err == nil {
-		return nil, errors.New("email already exists")
-	}
-	if err != sql.ErrNoRows {
-		return nil, err
+func generateJWT(userID int64) (string, error) {
+	// Get JWT secret from environment variable
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		return "", errors.New("JWT_SECRET environment variable is not set")
 	}
 
-	// Hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, err
+	// Get expiry hours from environment variable
+	expiryHours := 24 // Default to 24 hours
+	if envExpiry := os.Getenv("JWT_EXPIRY_HOURS"); envExpiry != "" {
+		if parsed, err := time.ParseDuration(envExpiry + "h"); err == nil {
+			expiryHours = int(parsed.Hours())
+		}
 	}
 
-	// Create user with default role
-	params := repository.CreateUserParams{
-		Email:    req.Email,
-		Password: string(hashedPassword),
+	// Create claims
+	claims := jwt.MapClaims{
+		"user_id": userID,
+		"exp":     time.Now().Add(time.Duration(expiryHours) * time.Hour).Unix(),
 	}
 
-	result, err := s.queries.CreateUser(ctx, params)
-	if err != nil {
-		return nil, err
-	}
+	// Create token
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	// Get the ID of the newly created user
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, err
-	}
-
-	// Fetch the created user
-	user, err := s.queries.GetUser(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-
-	return &model.User{
-		GVA_MODEL: model.GVA_MODEL{
-			ID:        user.ID,
-			CreatedAt: user.CreatedAt,
-			UpdatedAt: user.UpdatedAt,
-		},
-		Email: user.Email,
-		Role:  model.Role(user.Role),
-	}, nil
-} 
+	// Sign and get the complete encoded token as a string
+	return token.SignedString([]byte(secret))
+}
