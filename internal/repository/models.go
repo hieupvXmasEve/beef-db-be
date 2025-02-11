@@ -39,8 +39,8 @@ type Product struct {
 	Name        string
 	Slug        string
 	Description string
-	Price       pgtype.Numeric
-	PriceSale   pgtype.Numeric
+	Price       float64
+	PriceSale   float64
 	ImageUrl    string
 	ThumbUrl    string
 	CreatedAt   pgtype.Timestamp

@@ -110,10 +110,6 @@ JOIN categories c ON p.category_id = c.id
 WHERE p.slug = $1;
 
 -- name: ListProducts :many
-WITH total AS (
-    SELECT COUNT(*) as count
-    FROM products
-)
 SELECT
     p.id,
     p.category_id,
@@ -126,11 +122,9 @@ SELECT
     p.thumb_url,
     p.created_at,
     c.name as category_name,
-    c.slug as category_slug,
-    total.count as total_count
+    c.slug as category_slug
 FROM products p
 JOIN categories c ON p.category_id = c.id
-CROSS JOIN total
 ORDER BY p.created_at DESC
 LIMIT $1 OFFSET $2;
 
@@ -178,3 +172,13 @@ WHERE id = $9;
 -- name: DeleteProduct :exec
 DELETE FROM products
 WHERE id = $1;
+
+-- name: GetTotalProducts :one
+SELECT COUNT(*) AS total_count FROM products;
+
+-- name: GetTotalProductsByCategory :one
+SELECT COUNT(*) AS total_count 
+FROM products p
+JOIN categories c ON p.category_id = c.id
+WHERE (SQLC_OMIT_IF_NULL(@id::int4) IS NULL OR c.id = @id)
+  AND (SQLC_OMIT_IF_NULL(@slug::text) IS NULL OR c.slug = @slug);

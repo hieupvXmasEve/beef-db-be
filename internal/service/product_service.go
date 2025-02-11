@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"beef-db-be/internal/model"
@@ -26,25 +25,13 @@ func NewProductService(pool *pgxpool.Pool) *ProductService {
 }
 
 func (s *ProductService) CreateProduct(ctx context.Context, req model.CreateProductRequest) (*model.Product, error) {
-	var priceSale pgtype.Numeric
-	if req.PriceSale != 0 {
-		if err := priceSale.Scan(fmt.Sprintf("%.2f", req.PriceSale)); err != nil {
-			return nil, fmt.Errorf("invalid price_sale: %v", err)
-		}
-	}
-
-	var price pgtype.Numeric
-	if err := price.Scan(fmt.Sprintf("%.2f", req.Price)); err != nil {
-		return nil, fmt.Errorf("invalid price: %v", err)
-	}
-
 	result, err := s.queries.CreateProduct(ctx, repository.CreateProductParams{
 		CategoryID:  int32(req.CategoryID),
 		Name:        req.Name,
 		Slug:        req.Slug,
 		Description: req.Description,
-		Price:       price,
-		PriceSale:   priceSale,
+		Price:       req.Price,
+		PriceSale:   req.PriceSale,
 		ImageUrl:    req.ImageURL,
 		ThumbUrl:    req.ThumbURL,
 	})
@@ -64,26 +51,14 @@ func (s *ProductService) GetProduct(ctx context.Context, id int) (*model.Product
 		return nil, err
 	}
 
-	var price float64
-	if err := product.Price.Scan(&price); err != nil {
-		return nil, fmt.Errorf("invalid price: %v", err)
-	}
-
-	var priceSale float64
-	if product.PriceSale.Valid {
-		if err := product.PriceSale.Scan(&priceSale); err != nil {
-			return nil, fmt.Errorf("invalid price_sale: %v", err)
-		}
-	}
-
 	return &model.Product{
 		ID:           int(product.ID),
 		CategoryID:   int(product.CategoryID),
 		Name:         product.Name,
 		Slug:         product.Slug,
 		Description:  product.Description,
-		Price:        price,
-		PriceSale:    priceSale,
+		Price:        product.Price,
+		PriceSale:    product.PriceSale,
 		ImageURL:     product.ImageUrl,
 		ThumbURL:     product.ThumbUrl,
 		CreatedAt:    product.CreatedAt.Time,
@@ -101,26 +76,14 @@ func (s *ProductService) GetProductBySlug(ctx context.Context, slug string) (*mo
 		return nil, err
 	}
 
-	var price float64
-	if err := product.Price.Scan(&price); err != nil {
-		return nil, fmt.Errorf("invalid price: %v", err)
-	}
-
-	var priceSale float64
-	if product.PriceSale.Valid {
-		if err := product.PriceSale.Scan(&priceSale); err != nil {
-			return nil, fmt.Errorf("invalid price_sale: %v", err)
-		}
-	}
-
 	return &model.Product{
 		ID:           int(product.ID),
 		CategoryID:   int(product.CategoryID),
 		Name:         product.Name,
 		Slug:         product.Slug,
 		Description:  product.Description,
-		Price:        price,
-		PriceSale:    priceSale,
+		Price:        product.Price,
+		PriceSale:    product.PriceSale,
 		ImageURL:     product.ImageUrl,
 		ThumbURL:     product.ThumbUrl,
 		CreatedAt:    product.CreatedAt.Time,
@@ -130,6 +93,12 @@ func (s *ProductService) GetProductBySlug(ctx context.Context, slug string) (*mo
 }
 
 func (s *ProductService) ListProducts(ctx context.Context, pagination model.Pagination) ([]model.Product, int64, error) {
+	// Get total count first
+	totalCount, err := s.queries.GetTotalProducts(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get total count: %v", err)
+	}
+
 	params := repository.ListProductsParams{
 		Limit:  int32(pagination.GetLimit()),
 		Offset: int32(pagination.GetOffset()),
@@ -143,34 +112,17 @@ func (s *ProductService) ListProducts(ctx context.Context, pagination model.Pagi
 		return nil, 0, err
 	}
 
-	var totalCount int64
-	if len(products) > 0 {
-		totalCount = products[0].TotalCount
-	}
-
 	// Convert repository products to model products
 	result := make([]model.Product, len(products))
 	for i, p := range products {
-		var price float64
-		if err := p.Price.Scan(&price); err != nil {
-			return nil, 0, fmt.Errorf("invalid price: %v", err)
-		}
-
-		var priceSale float64
-		if p.PriceSale.Valid {
-			if err := p.PriceSale.Scan(&priceSale); err != nil {
-				return nil, 0, fmt.Errorf("invalid price_sale: %v", err)
-			}
-		}
-
 		result[i] = model.Product{
 			ID:           int(p.ID),
 			CategoryID:   int(p.CategoryID),
 			Name:         p.Name,
 			Slug:         p.Slug,
 			Description:  p.Description,
-			Price:        price,
-			PriceSale:    priceSale,
+			Price:        p.Price,
+			PriceSale:    p.PriceSale,
 			ImageURL:     p.ImageUrl,
 			ThumbURL:     p.ThumbUrl,
 			CreatedAt:    p.CreatedAt.Time,
@@ -183,6 +135,17 @@ func (s *ProductService) ListProducts(ctx context.Context, pagination model.Pagi
 }
 
 func (s *ProductService) ListProductsByCategory(ctx context.Context, categoryID int64, categorySlug string, pagination model.Pagination) ([]model.Product, int64, error) {
+	countParams := repository.GetTotalProductsByCategoryParams{
+		ID:   int32(categoryID),
+		Slug: categorySlug,
+	}
+
+	// Get total count first
+	totalCount, err := s.queries.GetTotalProductsByCategory(ctx, countParams)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get total count: %v", err)
+	}
+
 	params := repository.ListProductsByCategoryParams{
 		ID:     int32(categoryID),
 		Slug:   categorySlug,
@@ -196,34 +159,17 @@ func (s *ProductService) ListProductsByCategory(ctx context.Context, categoryID 
 		return nil, 0, err
 	}
 
-	var totalCount int64
-	if len(products) > 0 {
-		totalCount = products[0].TotalCount
-	}
-
 	// Convert repository products to model products
 	result := make([]model.Product, len(products))
 	for i, p := range products {
-		var price float64
-		if err := p.Price.Scan(&price); err != nil {
-			return nil, 0, fmt.Errorf("invalid price: %v", err)
-		}
-
-		var priceSale float64
-		if p.PriceSale.Valid {
-			if err := p.PriceSale.Scan(&priceSale); err != nil {
-				return nil, 0, fmt.Errorf("invalid price_sale: %v", err)
-			}
-		}
-
 		result[i] = model.Product{
 			ID:           int(p.ID),
 			CategoryID:   int(p.CategoryID),
 			Name:         p.Name,
 			Slug:         p.Slug,
 			Description:  p.Description,
-			Price:        price,
-			PriceSale:    priceSale,
+			Price:        p.Price,
+			PriceSale:    p.PriceSale,
 			ImageURL:     p.ImageUrl,
 			ThumbURL:     p.ThumbUrl,
 			CreatedAt:    p.CreatedAt.Time,
@@ -236,26 +182,14 @@ func (s *ProductService) ListProductsByCategory(ctx context.Context, categoryID 
 }
 
 func (s *ProductService) UpdateProduct(ctx context.Context, id int, req model.UpdateProductRequest) (*model.Product, error) {
-	var priceSale pgtype.Numeric
-	if req.PriceSale != 0 {
-		if err := priceSale.Scan(fmt.Sprintf("%.2f", req.PriceSale)); err != nil {
-			return nil, fmt.Errorf("invalid price_sale: %v", err)
-		}
-	}
-
-	var price pgtype.Numeric
-	if err := price.Scan(req.Price); err != nil {
-		return nil, fmt.Errorf("invalid price: %v", err)
-	}
-
 	err := s.queries.UpdateProduct(ctx, repository.UpdateProductParams{
 		ID:          int32(id),
 		CategoryID:  int32(req.CategoryID),
 		Name:        req.Name,
 		Slug:        req.Slug,
 		Description: req.Description,
-		Price:       price,
-		PriceSale:   priceSale,
+		Price:       req.Price,
+		PriceSale:   req.PriceSale,
 		ImageUrl:    req.ImageURL,
 		ThumbUrl:    req.ThumbURL,
 	})

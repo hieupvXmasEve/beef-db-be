@@ -56,8 +56,8 @@ type CreateProductParams struct {
 	Name        string
 	Slug        string
 	Description string
-	Price       pgtype.Numeric
-	PriceSale   pgtype.Numeric
+	Price       float64
+	PriceSale   float64
 	ImageUrl    string
 	ThumbUrl    string
 }
@@ -191,8 +191,8 @@ type GetProductRow struct {
 	Name         string
 	Slug         string
 	Description  string
-	Price        pgtype.Numeric
-	PriceSale    pgtype.Numeric
+	Price        float64
+	PriceSale    float64
 	ImageUrl     string
 	ThumbUrl     string
 	CreatedAt    pgtype.Timestamp
@@ -245,8 +245,8 @@ type GetProductBySlugRow struct {
 	Name         string
 	Slug         string
 	Description  string
-	Price        pgtype.Numeric
-	PriceSale    pgtype.Numeric
+	Price        float64
+	PriceSale    float64
 	ImageUrl     string
 	ThumbUrl     string
 	CreatedAt    pgtype.Timestamp
@@ -272,6 +272,37 @@ func (q *Queries) GetProductBySlug(ctx context.Context, slug string) (GetProduct
 		&i.CategorySlug,
 	)
 	return i, err
+}
+
+const getTotalProducts = `-- name: GetTotalProducts :one
+SELECT COUNT(*) AS total_count FROM products
+`
+
+func (q *Queries) GetTotalProducts(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, getTotalProducts)
+	var total_count int64
+	err := row.Scan(&total_count)
+	return total_count, err
+}
+
+const getTotalProductsByCategory = `-- name: GetTotalProductsByCategory :one
+SELECT COUNT(*) AS total_count 
+FROM products p
+JOIN categories c ON p.category_id = c.id
+WHERE (SQLC_OMIT_IF_NULL($1::int4) IS NULL OR c.id = $1)
+  AND (SQLC_OMIT_IF_NULL($2::text) IS NULL OR c.slug = $2)
+`
+
+type GetTotalProductsByCategoryParams struct {
+	ID   int32
+	Slug string
+}
+
+func (q *Queries) GetTotalProductsByCategory(ctx context.Context, arg GetTotalProductsByCategoryParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getTotalProductsByCategory, arg.ID, arg.Slug)
+	var total_count int64
+	err := row.Scan(&total_count)
+	return total_count, err
 }
 
 const getUser = `-- name: GetUser :one
@@ -360,10 +391,6 @@ func (q *Queries) ListCategories(ctx context.Context) ([]Category, error) {
 }
 
 const listProducts = `-- name: ListProducts :many
-WITH total AS (
-    SELECT COUNT(*) as count
-    FROM products
-)
 SELECT
     p.id,
     p.category_id,
@@ -376,11 +403,9 @@ SELECT
     p.thumb_url,
     p.created_at,
     c.name as category_name,
-    c.slug as category_slug,
-    total.count as total_count
+    c.slug as category_slug
 FROM products p
 JOIN categories c ON p.category_id = c.id
-CROSS JOIN total
 ORDER BY p.created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -396,14 +421,13 @@ type ListProductsRow struct {
 	Name         string
 	Slug         string
 	Description  string
-	Price        pgtype.Numeric
-	PriceSale    pgtype.Numeric
+	Price        float64
+	PriceSale    float64
 	ImageUrl     string
 	ThumbUrl     string
 	CreatedAt    pgtype.Timestamp
 	CategoryName string
 	CategorySlug string
-	TotalCount   int64
 }
 
 func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]ListProductsRow, error) {
@@ -428,7 +452,6 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]L
 			&i.CreatedAt,
 			&i.CategoryName,
 			&i.CategorySlug,
-			&i.TotalCount,
 		); err != nil {
 			return nil, err
 		}
@@ -482,8 +505,8 @@ type ListProductsByCategoryRow struct {
 	Name         string
 	Slug         string
 	Description  string
-	Price        pgtype.Numeric
-	PriceSale    pgtype.Numeric
+	Price        float64
+	PriceSale    float64
 	ImageUrl     string
 	ThumbUrl     string
 	CreatedAt    pgtype.Timestamp
@@ -614,8 +637,8 @@ type UpdateProductParams struct {
 	Name        string
 	Slug        string
 	Description string
-	Price       pgtype.Numeric
-	PriceSale   pgtype.Numeric
+	Price       float64
+	PriceSale   float64
 	ImageUrl    string
 	ThumbUrl    string
 	ID          int32
