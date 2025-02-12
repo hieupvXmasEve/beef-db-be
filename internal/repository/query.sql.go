@@ -96,6 +96,24 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, 
 	return id, err
 }
 
+const createWebsiteSetting = `-- name: CreateWebsiteSetting :one
+INSERT INTO website_settings (name, value)
+VALUES ($1, $2)
+RETURNING id
+`
+
+type CreateWebsiteSettingParams struct {
+	Name  string
+	Value string
+}
+
+func (q *Queries) CreateWebsiteSetting(ctx context.Context, arg CreateWebsiteSettingParams) (int32, error) {
+	row := q.db.QueryRow(ctx, createWebsiteSetting, arg.Name, arg.Value)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
 const deleteCategory = `-- name: DeleteCategory :exec
 DELETE FROM categories
 WHERE id = $1
@@ -123,6 +141,16 @@ WHERE id = $1
 
 func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 	_, err := q.db.Exec(ctx, deleteUser, id)
+	return err
+}
+
+const deleteWebsiteSetting = `-- name: DeleteWebsiteSetting :exec
+DELETE FROM website_settings
+WHERE id = $1
+`
+
+func (q *Queries) DeleteWebsiteSetting(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, deleteWebsiteSetting, id)
 	return err
 }
 
@@ -355,6 +383,32 @@ func (q *Queries) GetUserCount(ctx context.Context) (int64, error) {
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const getWebsiteSetting = `-- name: GetWebsiteSetting :one
+SELECT id, name, value
+FROM website_settings
+WHERE id = $1
+`
+
+func (q *Queries) GetWebsiteSetting(ctx context.Context, id int32) (WebsiteSetting, error) {
+	row := q.db.QueryRow(ctx, getWebsiteSetting, id)
+	var i WebsiteSetting
+	err := row.Scan(&i.ID, &i.Name, &i.Value)
+	return i, err
+}
+
+const getWebsiteSettingByName = `-- name: GetWebsiteSettingByName :one
+SELECT id, name, value
+FROM website_settings
+WHERE name = $1
+`
+
+func (q *Queries) GetWebsiteSettingByName(ctx context.Context, name string) (WebsiteSetting, error) {
+	row := q.db.QueryRow(ctx, getWebsiteSettingByName, name)
+	var i WebsiteSetting
+	err := row.Scan(&i.ID, &i.Name, &i.Value)
+	return i, err
 }
 
 const listCategories = `-- name: ListCategories :many
@@ -593,6 +647,31 @@ func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 	return items, nil
 }
 
+const listWebsiteSettings = `-- name: ListWebsiteSettings :many
+SELECT id, name, value
+FROM website_settings
+`
+
+func (q *Queries) ListWebsiteSettings(ctx context.Context) ([]WebsiteSetting, error) {
+	rows, err := q.db.Query(ctx, listWebsiteSettings)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []WebsiteSetting
+	for rows.Next() {
+		var i WebsiteSetting
+		if err := rows.Scan(&i.ID, &i.Name, &i.Value); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateCategory = `-- name: UpdateCategory :exec
 UPDATE categories
 SET name = $1, slug = $2, description = $3, image_url = $4
@@ -672,5 +751,21 @@ type UpdateUserParams struct {
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
 	_, err := q.db.Exec(ctx, updateUser, arg.Email, arg.ID)
+	return err
+}
+
+const updateWebsiteSetting = `-- name: UpdateWebsiteSetting :exec
+UPDATE website_settings
+SET value = $1
+WHERE name = $2
+`
+
+type UpdateWebsiteSettingParams struct {
+	Value string
+	Name  string
+}
+
+func (q *Queries) UpdateWebsiteSetting(ctx context.Context, arg UpdateWebsiteSettingParams) error {
+	_, err := q.db.Exec(ctx, updateWebsiteSetting, arg.Value, arg.Name)
 	return err
 }

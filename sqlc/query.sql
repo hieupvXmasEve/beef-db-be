@@ -182,3 +182,31 @@ FROM products p
 JOIN categories c ON p.category_id = c.id
 WHERE (SQLC_OMIT_IF_NULL(@id::int4) IS NULL OR c.id = @id)
   AND (SQLC_OMIT_IF_NULL(@slug::text) IS NULL OR c.slug = @slug);
+
+-- name: CreateWebsiteSetting :one
+INSERT INTO website_settings (name, value)
+VALUES ($1, $2)
+RETURNING id;
+
+-- name: GetWebsiteSetting :one
+SELECT *
+FROM website_settings
+WHERE id = $1;
+
+-- name: GetWebsiteSettingByName :one
+SELECT *
+FROM website_settings
+WHERE name = $1;
+
+-- name: ListWebsiteSettings :many
+SELECT *
+FROM website_settings;
+
+-- name: UpdateWebsiteSetting :exec
+UPDATE website_settings
+SET value = $1
+WHERE name = $2;
+
+-- name: DeleteWebsiteSetting :exec
+DELETE FROM website_settings
+WHERE id = $1;

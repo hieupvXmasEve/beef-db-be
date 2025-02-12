@@ -32,12 +32,14 @@ func main() {
 	userService := service.NewUserService(pool)
 	categoryService := service.NewCategoryService(pool)
 	productService := service.NewProductService(pool)
+	websiteSettingService := service.NewWebsiteSettingService(pool)
 	healthHandler := handler.NewHealthHandler(pool)
 
 	// Initialize handlers
 	userHandler := handler.NewUserHandler(userService)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
-	productHandler := handler.NewProductHandler(productService)
+	productHandler := handler.NewProductHandler(productService, websiteSettingService)
+	websiteSettingHandler := handler.NewWebsiteSettingHandler(websiteSettingService)
 
 	// Initialize router
 	r := chi.NewRouter()
@@ -69,8 +71,14 @@ func main() {
 		r.Get("/products", productHandler.ListProducts)
 		r.Get("/products/{id}", productHandler.GetProduct)
 		r.Get("/products/slug/{slug}", productHandler.GetProductBySlug)
+		r.Get("/products/by-setting-categories", productHandler.ListProductsBySettingCategories)
 		r.Get("/categories/{categoryId}/products", productHandler.ListProductsByCategory)
 		r.Get("/categories/slug/{categorySlug}/products", productHandler.ListProductsByCategory)
+
+		// Public website settings routes
+		r.Get("/settings", websiteSettingHandler.List)
+		r.Get("/settings/{id}", websiteSettingHandler.Get)
+		r.Get("/settings/name/{name}", websiteSettingHandler.GetByName)
 
 		// Admin-only routes
 		r.Group(func(r chi.Router) {
@@ -89,6 +97,11 @@ func main() {
 			r.Post("/products", productHandler.CreateProduct)
 			r.Put("/products/{id}", productHandler.UpdateProduct)
 			r.Delete("/products/{id}", productHandler.DeleteProduct)
+
+			// Website settings management
+			r.Post("/settings", websiteSettingHandler.Create)
+			r.Put("/settings/name/{name}", websiteSettingHandler.Update)
+			r.Delete("/settings/{id}", websiteSettingHandler.Delete)
 		})
 	})
 

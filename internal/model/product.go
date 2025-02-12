@@ -67,3 +67,15 @@ type UpdateProductRequest struct {
 	ImageURL    string  `json:"image_url"`
 	ThumbURL    string  `json:"thumb_url"`
 }
+
+// CategoryProductsResponse represents a category with its products
+type CategoryProductsResponse struct {
+	Name     string    `json:"name"`
+	ImageURL string    `json:"image_url"`
+	Products []Product `json:"products"`
+}
+
+// CategoryProductsListResponse represents a list of categories with their products
+type CategoryProductsListResponse struct {
+	Categories []CategoryProductsResponse `json:"categories"`
+}

@@ -12,13 +12,17 @@ import (
 	"beef-db-be/internal/utils"
 )
 
+// ProductHandler handles HTTP requests related to products
 type ProductHandler struct {
 	productService *service.ProductService
+	websiteService *service.WebsiteSettingService
 }
 
-func NewProductHandler(productService *service.ProductService) *ProductHandler {
+// NewProductHandler creates a new ProductHandler instance
+func NewProductHandler(productService *service.ProductService, websiteService *service.WebsiteSettingService) *ProductHandler {
 	return &ProductHandler{
 		productService: productService,
+		websiteService: websiteService,
 	}
 }
 
@@ -205,4 +209,37 @@ func (h *ProductHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 
 	utils.SendResponse(w, http.StatusOK,
 		model.NewSuccessResponse("Product deleted successfully", nil))
+}
+
+// ListProductsBySettingCategories handles the request to get products by category IDs from website settings
+func (h *ProductHandler) ListProductsBySettingCategories(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Get the website setting for show_product_category
+	setting, err := h.websiteService.GetByName(ctx, "show_product_category")
+
+	if err != nil {
+		utils.SendResponse(w, http.StatusInternalServerError,
+			model.NewErrorResponse("Failed to get website settings", err.Error()))
+		return
+	}
+
+	// Parse category IDs from the setting value
+	var categoryIDs []int
+	if err := json.Unmarshal([]byte(setting.Value), &categoryIDs); err != nil {
+		utils.SendResponse(w, http.StatusInternalServerError,
+			model.NewErrorResponse("Invalid category IDs in settings", err.Error()))
+		return
+	}
+
+	// Get products by category IDs
+	categories, err := h.productService.GetProductsByCategoryIDs(ctx, categoryIDs)
+	if err != nil {
+		utils.SendResponse(w, http.StatusInternalServerError,
+			model.NewErrorResponse("Failed to get products", err.Error()))
+		return
+	}
+
+	utils.SendResponse(w, http.StatusOK,
+		model.NewSuccessResponse("Products retrieved successfully", categories))
 }

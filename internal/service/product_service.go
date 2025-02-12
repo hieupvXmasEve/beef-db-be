@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 
@@ -212,4 +213,56 @@ func (s *ProductService) DeleteProduct(ctx context.Context, id int) error {
 		return err
 	}
 	return nil
+}
+
+// GetProductsByCategoryIDs retrieves products grouped by categories based on the website settings
+func (s *ProductService) GetProductsByCategoryIDs(ctx context.Context, categoryIDs []int) ([]model.CategoryProductsResponse, error) {
+	var result []model.CategoryProductsResponse
+
+	// Get categories with their products
+	for _, categoryID := range categoryIDs {
+		// Get category details
+		category, err := s.queries.GetCategory(ctx, int32(categoryID))
+		if err != nil {
+			if err == sql.ErrNoRows {
+				continue // Skip if category not found
+			}
+			return nil, fmt.Errorf("error getting category: %w", err)
+		}
+
+		// Get products for the category
+		products, err := s.queries.ListProductsByCategory(ctx, repository.ListProductsByCategoryParams{
+			ID:     int32(categoryID),
+			Slug:   category.Slug,
+			Limit:  10,
+			Offset: 0,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("error getting products: %w", err)
+		}
+
+		// Convert DB products to model.Product
+		modelProducts := make([]model.Product, len(products))
+		for i, p := range products {
+			modelProducts[i] = model.Product{
+				ID:        int(p.ID),
+				Name:      p.Name,
+				Slug:      p.Slug,
+				Price:     float64(p.Price),
+				PriceSale: float64(p.PriceSale),
+				ImageURL:  p.ImageUrl,
+				ThumbURL:  p.ThumbUrl,
+				CreatedAt: p.CreatedAt.Time,
+			}
+		}
+
+		// Add to result
+		result = append(result, model.CategoryProductsResponse{
+			Name:     category.Name,
+			ImageURL: category.ImageUrl.String,
+			Products: modelProducts,
+		})
+	}
+
+	return result, nil
 }
