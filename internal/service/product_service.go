@@ -27,14 +27,15 @@ func NewProductService(pool *pgxpool.Pool) *ProductService {
 
 func (s *ProductService) CreateProduct(ctx context.Context, req model.CreateProductRequest) (*model.Product, error) {
 	result, err := s.queries.CreateProduct(ctx, repository.CreateProductParams{
-		CategoryID:  int32(req.CategoryID),
-		Name:        req.Name,
-		Slug:        req.Slug,
-		Description: req.Description,
-		Price:       req.Price,
-		PriceSale:   req.PriceSale,
-		ImageUrl:    req.ImageURL,
-		ThumbUrl:    req.ThumbURL,
+		CategoryID:        int32(req.CategoryID),
+		Name:              req.Name,
+		Slug:              req.Slug,
+		Description:       req.Description,
+		Price:             req.Price,
+		PriceSale:         req.PriceSale,
+		ImageUrl:          req.ImageURL,
+		UnitOfMeasurement: req.UnitOfMeasurement,
+		ThumbUrl:          req.ThumbURL,
 	})
 	if err != nil {
 		return nil, err
@@ -53,18 +54,19 @@ func (s *ProductService) GetProduct(ctx context.Context, id int) (*model.Product
 	}
 
 	return &model.Product{
-		ID:           int(product.ID),
-		CategoryID:   int(product.CategoryID),
-		Name:         product.Name,
-		Slug:         product.Slug,
-		Description:  product.Description,
-		Price:        product.Price,
-		PriceSale:    product.PriceSale,
-		ImageURL:     product.ImageUrl,
-		ThumbURL:     product.ThumbUrl,
-		CreatedAt:    product.CreatedAt.Time,
-		CategoryName: product.CategoryName,
-		CategorySlug: product.CategorySlug,
+		ID:                int(product.ID),
+		CategoryID:        int(product.CategoryID),
+		Name:              product.Name,
+		Slug:              product.Slug,
+		Description:       product.Description,
+		Price:             product.Price,
+		PriceSale:         product.PriceSale,
+		ImageURL:          product.ImageUrl,
+		ThumbURL:          product.ThumbUrl,
+		CreatedAt:         product.CreatedAt.Time,
+		CategoryName:      product.CategoryName,
+		CategorySlug:      product.CategorySlug,
+		UnitOfMeasurement: product.UnitOfMeasurement,
 	}, nil
 }
 
@@ -105,9 +107,8 @@ func (s *ProductService) ListProducts(ctx context.Context, pagination model.Pagi
 		Offset: int32(pagination.GetOffset()),
 	}
 
-	fmt.Println("pagination", params)
 	products, err := s.queries.ListProducts(ctx, params)
-	fmt.Println("products", len(products))
+	fmt.Println("UnitOfMeasurement", products[0].UnitOfMeasurement)
 
 	if err != nil {
 		return nil, 0, err
@@ -117,18 +118,19 @@ func (s *ProductService) ListProducts(ctx context.Context, pagination model.Pagi
 	result := make([]model.Product, len(products))
 	for i, p := range products {
 		result[i] = model.Product{
-			ID:           int(p.ID),
-			CategoryID:   int(p.CategoryID),
-			Name:         p.Name,
-			Slug:         p.Slug,
-			Description:  p.Description,
-			Price:        p.Price,
-			PriceSale:    p.PriceSale,
-			ImageURL:     p.ImageUrl,
-			ThumbURL:     p.ThumbUrl,
-			CreatedAt:    p.CreatedAt.Time,
-			CategoryName: p.CategoryName,
-			CategorySlug: p.CategorySlug,
+			ID:                int(p.ID),
+			CategoryID:        int(p.CategoryID),
+			Name:              p.Name,
+			Slug:              p.Slug,
+			Description:       p.Description,
+			Price:             p.Price,
+			PriceSale:         p.PriceSale,
+			ImageURL:          p.ImageUrl,
+			ThumbURL:          p.ThumbUrl,
+			CreatedAt:         p.CreatedAt.Time,
+			CategoryName:      p.CategoryName,
+			CategorySlug:      p.CategorySlug,
+			UnitOfMeasurement: p.UnitOfMeasurement,
 		}
 	}
 
@@ -155,7 +157,6 @@ func (s *ProductService) ListProductsByCategory(ctx context.Context, categoryID 
 	}
 
 	products, err := s.queries.ListProductsByCategory(ctx, params)
-	fmt.Println("products", products)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -164,18 +165,19 @@ func (s *ProductService) ListProductsByCategory(ctx context.Context, categoryID 
 	result := make([]model.Product, len(products))
 	for i, p := range products {
 		result[i] = model.Product{
-			ID:           int(p.ID),
-			CategoryID:   int(p.CategoryID),
-			Name:         p.Name,
-			Slug:         p.Slug,
-			Description:  p.Description,
-			Price:        p.Price,
-			PriceSale:    p.PriceSale,
-			ImageURL:     p.ImageUrl,
-			ThumbURL:     p.ThumbUrl,
-			CreatedAt:    p.CreatedAt.Time,
-			CategoryName: p.CategoryName,
-			CategorySlug: p.CategorySlug,
+			ID:                int(p.ID),
+			CategoryID:        int(p.CategoryID),
+			Name:              p.Name,
+			Slug:              p.Slug,
+			Description:       p.Description,
+			Price:             p.Price,
+			PriceSale:         p.PriceSale,
+			ImageURL:          p.ImageUrl,
+			ThumbURL:          p.ThumbUrl,
+			CreatedAt:         p.CreatedAt.Time,
+			CategoryName:      p.CategoryName,
+			CategorySlug:      p.CategorySlug,
+			UnitOfMeasurement: p.UnitOfMeasurement,
 		}
 	}
 
@@ -184,15 +186,16 @@ func (s *ProductService) ListProductsByCategory(ctx context.Context, categoryID 
 
 func (s *ProductService) UpdateProduct(ctx context.Context, id int, req model.UpdateProductRequest) (*model.Product, error) {
 	err := s.queries.UpdateProduct(ctx, repository.UpdateProductParams{
-		ID:          int32(id),
-		CategoryID:  int32(req.CategoryID),
-		Name:        req.Name,
-		Slug:        req.Slug,
-		Description: req.Description,
-		Price:       req.Price,
-		PriceSale:   req.PriceSale,
-		ImageUrl:    req.ImageURL,
-		ThumbUrl:    req.ThumbURL,
+		ID:                int32(id),
+		CategoryID:        int32(req.CategoryID),
+		Name:              req.Name,
+		Slug:              req.Slug,
+		Description:       req.Description,
+		UnitOfMeasurement: req.UnitOfMeasurement,
+		Price:             req.Price,
+		PriceSale:         req.PriceSale,
+		ImageUrl:          req.ImageURL,
+		ThumbUrl:          req.ThumbURL,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -245,14 +248,15 @@ func (s *ProductService) GetProductsByCategoryIDs(ctx context.Context, categoryI
 		modelProducts := make([]model.Product, len(products))
 		for i, p := range products {
 			modelProducts[i] = model.Product{
-				ID:        int(p.ID),
-				Name:      p.Name,
-				Slug:      p.Slug,
-				Price:     float64(p.Price),
-				PriceSale: float64(p.PriceSale),
-				ImageURL:  p.ImageUrl,
-				ThumbURL:  p.ThumbUrl,
-				CreatedAt: p.CreatedAt.Time,
+				ID:                int(p.ID),
+				Name:              p.Name,
+				Slug:              p.Slug,
+				Price:             float64(p.Price),
+				PriceSale:         float64(p.PriceSale),
+				ImageURL:          p.ImageUrl,
+				ThumbURL:          p.ThumbUrl,
+				CreatedAt:         p.CreatedAt.Time,
+				UnitOfMeasurement: p.UnitOfMeasurement,
 			}
 		}
 

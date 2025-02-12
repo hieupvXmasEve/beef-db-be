@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -114,6 +115,7 @@ func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Println("totalCount", products[0])
 	paginatedResp := model.NewPaginatedResponse(products, totalCount, pagination.Page, pagination.PageSize)
 	utils.SendResponse(w, http.StatusOK,
 		model.NewSuccessResponse("Products retrieved successfully", paginatedResp))
@@ -239,7 +241,6 @@ func (h *ProductHandler) ListProductsBySettingCategories(w http.ResponseWriter, 
 			model.NewErrorResponse("Failed to get products", err.Error()))
 		return
 	}
-
 	utils.SendResponse(w, http.StatusOK,
 		model.NewSuccessResponse("Products retrieved successfully", categories))
 }

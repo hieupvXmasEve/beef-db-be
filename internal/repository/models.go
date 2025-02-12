@@ -34,16 +34,17 @@ type ContactMessage struct {
 }
 
 type Product struct {
-	ID          int32
-	CategoryID  int32
-	Name        string
-	Slug        string
-	Description string
-	Price       float64
-	PriceSale   float64
-	ImageUrl    string
-	ThumbUrl    string
-	CreatedAt   pgtype.Timestamp
+	ID                int32
+	CategoryID        int32
+	Name              string
+	Slug              string
+	Description       string
+	Price             float64
+	PriceSale         float64
+	UnitOfMeasurement string
+	ImageUrl          string
+	ThumbUrl          string
+	CreatedAt         pgtype.Timestamp
 }
 
 type User struct {

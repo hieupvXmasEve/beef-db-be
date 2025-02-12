@@ -34,6 +34,7 @@ CREATE TABLE products (
     description TEXT,
     price DECIMAL(10, 2) NOT NULL,
     price_sale DECIMAL(10, 2) NULL,
+    unit_of_measurement VARCHAR(50) NOT NULL DEFAULT 'piece',
     image_url VARCHAR(255),
     thumb_url VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

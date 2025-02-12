@@ -67,10 +67,11 @@ INSERT INTO products (
     description,
     price,
     price_sale,
+    unit_of_measurement,
     image_url,
     thumb_url
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING id;
 
 -- name: GetProduct :one
@@ -82,6 +83,7 @@ SELECT
     p.description,
     p.price,
     p.price_sale,
+    p.unit_of_measurement,
     p.image_url,
     p.thumb_url,
     p.created_at,
@@ -100,6 +102,7 @@ SELECT
     p.description,
     p.price,
     p.price_sale,
+    p.unit_of_measurement,
     p.image_url,
     p.thumb_url,
     p.created_at,
@@ -118,6 +121,7 @@ SELECT
     p.description,
     p.price,
     p.price_sale,
+    p.unit_of_measurement,
     p.image_url,
     p.thumb_url,
     p.created_at,
@@ -143,6 +147,7 @@ SELECT
     p.description,
     p.price,
     p.price_sale,
+    p.unit_of_measurement,
     p.image_url,
     p.thumb_url,
     p.created_at,
@@ -165,9 +170,10 @@ SET
     description = $4,
     price = $5,
     price_sale = $6,
-    image_url = $7,
-    thumb_url = $8
-WHERE id = $9;
+    unit_of_measurement = $7,
+    image_url = $8,
+    thumb_url = $9
+WHERE id = $10;
 
 -- name: DeleteProduct :exec
 DELETE FROM products

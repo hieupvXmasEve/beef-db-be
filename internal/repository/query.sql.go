@@ -44,22 +44,24 @@ INSERT INTO products (
     description,
     price,
     price_sale,
+    unit_of_measurement,
     image_url,
     thumb_url
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING id
 `
 
 type CreateProductParams struct {
-	CategoryID  int32
-	Name        string
-	Slug        string
-	Description string
-	Price       float64
-	PriceSale   float64
-	ImageUrl    string
-	ThumbUrl    string
+	CategoryID        int32
+	Name              string
+	Slug              string
+	Description       string
+	Price             float64
+	PriceSale         float64
+	UnitOfMeasurement string
+	ImageUrl          string
+	ThumbUrl          string
 }
 
 func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (int32, error) {
@@ -70,6 +72,7 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (i
 		arg.Description,
 		arg.Price,
 		arg.PriceSale,
+		arg.UnitOfMeasurement,
 		arg.ImageUrl,
 		arg.ThumbUrl,
 	)
@@ -203,6 +206,7 @@ SELECT
     p.description,
     p.price,
     p.price_sale,
+    p.unit_of_measurement,
     p.image_url,
     p.thumb_url,
     p.created_at,
@@ -214,18 +218,19 @@ WHERE p.id = $1
 `
 
 type GetProductRow struct {
-	ID           int32
-	CategoryID   int32
-	Name         string
-	Slug         string
-	Description  string
-	Price        float64
-	PriceSale    float64
-	ImageUrl     string
-	ThumbUrl     string
-	CreatedAt    pgtype.Timestamp
-	CategoryName string
-	CategorySlug string
+	ID                int32
+	CategoryID        int32
+	Name              string
+	Slug              string
+	Description       string
+	Price             float64
+	PriceSale         float64
+	UnitOfMeasurement string
+	ImageUrl          string
+	ThumbUrl          string
+	CreatedAt         pgtype.Timestamp
+	CategoryName      string
+	CategorySlug      string
 }
 
 func (q *Queries) GetProduct(ctx context.Context, id int32) (GetProductRow, error) {
@@ -239,6 +244,7 @@ func (q *Queries) GetProduct(ctx context.Context, id int32) (GetProductRow, erro
 		&i.Description,
 		&i.Price,
 		&i.PriceSale,
+		&i.UnitOfMeasurement,
 		&i.ImageUrl,
 		&i.ThumbUrl,
 		&i.CreatedAt,
@@ -257,6 +263,7 @@ SELECT
     p.description,
     p.price,
     p.price_sale,
+    p.unit_of_measurement,
     p.image_url,
     p.thumb_url,
     p.created_at,
@@ -268,18 +275,19 @@ WHERE p.slug = $1
 `
 
 type GetProductBySlugRow struct {
-	ID           int32
-	CategoryID   int32
-	Name         string
-	Slug         string
-	Description  string
-	Price        float64
-	PriceSale    float64
-	ImageUrl     string
-	ThumbUrl     string
-	CreatedAt    pgtype.Timestamp
-	CategoryName string
-	CategorySlug string
+	ID                int32
+	CategoryID        int32
+	Name              string
+	Slug              string
+	Description       string
+	Price             float64
+	PriceSale         float64
+	UnitOfMeasurement string
+	ImageUrl          string
+	ThumbUrl          string
+	CreatedAt         pgtype.Timestamp
+	CategoryName      string
+	CategorySlug      string
 }
 
 func (q *Queries) GetProductBySlug(ctx context.Context, slug string) (GetProductBySlugRow, error) {
@@ -293,6 +301,7 @@ func (q *Queries) GetProductBySlug(ctx context.Context, slug string) (GetProduct
 		&i.Description,
 		&i.Price,
 		&i.PriceSale,
+		&i.UnitOfMeasurement,
 		&i.ImageUrl,
 		&i.ThumbUrl,
 		&i.CreatedAt,
@@ -453,6 +462,7 @@ SELECT
     p.description,
     p.price,
     p.price_sale,
+    p.unit_of_measurement,
     p.image_url,
     p.thumb_url,
     p.created_at,
@@ -470,18 +480,19 @@ type ListProductsParams struct {
 }
 
 type ListProductsRow struct {
-	ID           int32
-	CategoryID   int32
-	Name         string
-	Slug         string
-	Description  string
-	Price        float64
-	PriceSale    float64
-	ImageUrl     string
-	ThumbUrl     string
-	CreatedAt    pgtype.Timestamp
-	CategoryName string
-	CategorySlug string
+	ID                int32
+	CategoryID        int32
+	Name              string
+	Slug              string
+	Description       string
+	Price             float64
+	PriceSale         float64
+	UnitOfMeasurement string
+	ImageUrl          string
+	ThumbUrl          string
+	CreatedAt         pgtype.Timestamp
+	CategoryName      string
+	CategorySlug      string
 }
 
 func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]ListProductsRow, error) {
@@ -501,6 +512,7 @@ func (q *Queries) ListProducts(ctx context.Context, arg ListProductsParams) ([]L
 			&i.Description,
 			&i.Price,
 			&i.PriceSale,
+			&i.UnitOfMeasurement,
 			&i.ImageUrl,
 			&i.ThumbUrl,
 			&i.CreatedAt,
@@ -532,6 +544,7 @@ SELECT
     p.description,
     p.price,
     p.price_sale,
+    p.unit_of_measurement,
     p.image_url,
     p.thumb_url,
     p.created_at,
@@ -554,19 +567,20 @@ type ListProductsByCategoryParams struct {
 }
 
 type ListProductsByCategoryRow struct {
-	ID           int32
-	CategoryID   int32
-	Name         string
-	Slug         string
-	Description  string
-	Price        float64
-	PriceSale    float64
-	ImageUrl     string
-	ThumbUrl     string
-	CreatedAt    pgtype.Timestamp
-	CategoryName string
-	CategorySlug string
-	TotalCount   int64
+	ID                int32
+	CategoryID        int32
+	Name              string
+	Slug              string
+	Description       string
+	Price             float64
+	PriceSale         float64
+	UnitOfMeasurement string
+	ImageUrl          string
+	ThumbUrl          string
+	CreatedAt         pgtype.Timestamp
+	CategoryName      string
+	CategorySlug      string
+	TotalCount        int64
 }
 
 func (q *Queries) ListProductsByCategory(ctx context.Context, arg ListProductsByCategoryParams) ([]ListProductsByCategoryRow, error) {
@@ -591,6 +605,7 @@ func (q *Queries) ListProductsByCategory(ctx context.Context, arg ListProductsBy
 			&i.Description,
 			&i.Price,
 			&i.PriceSale,
+			&i.UnitOfMeasurement,
 			&i.ImageUrl,
 			&i.ThumbUrl,
 			&i.CreatedAt,
@@ -706,21 +721,23 @@ SET
     description = $4,
     price = $5,
     price_sale = $6,
-    image_url = $7,
-    thumb_url = $8
-WHERE id = $9
+    unit_of_measurement = $7,
+    image_url = $8,
+    thumb_url = $9
+WHERE id = $10
 `
 
 type UpdateProductParams struct {
-	CategoryID  int32
-	Name        string
-	Slug        string
-	Description string
-	Price       float64
-	PriceSale   float64
-	ImageUrl    string
-	ThumbUrl    string
-	ID          int32
+	CategoryID        int32
+	Name              string
+	Slug              string
+	Description       string
+	Price             float64
+	PriceSale         float64
+	UnitOfMeasurement string
+	ImageUrl          string
+	ThumbUrl          string
+	ID                int32
 }
 
 func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) error {
@@ -731,6 +748,7 @@ func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) er
 		arg.Description,
 		arg.Price,
 		arg.PriceSale,
+		arg.UnitOfMeasurement,
 		arg.ImageUrl,
 		arg.ThumbUrl,
 		arg.ID,
