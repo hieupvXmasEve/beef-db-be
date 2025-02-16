@@ -137,26 +137,63 @@ func (s *ProductService) ListProducts(ctx context.Context, pagination model.Pagi
 	return result, totalCount, nil
 }
 
-func (s *ProductService) ListProductsByCategory(ctx context.Context, categoryID int64, categorySlug string, pagination model.Pagination) ([]model.Product, int64, error) {
-	countParams := repository.GetTotalProductsByCategoryParams{
-		ID:   int32(categoryID),
-		Slug: categorySlug,
-	}
-
+// ListProductsByCategoryID retrieves products by category ID
+func (s *ProductService) ListProductsByCategoryID(ctx context.Context, categoryID int64, pagination model.Pagination) ([]model.Product, int64, error) {
 	// Get total count first
-	totalCount, err := s.queries.GetTotalProductsByCategory(ctx, countParams)
+	totalCount, err := s.queries.GetTotalProductsByCategoryID(ctx, int32(categoryID))
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get total count: %v", err)
 	}
 
-	params := repository.ListProductsByCategoryParams{
+	params := repository.ListProductsByCategoryIDParams{
 		ID:     int32(categoryID),
+		Limit:  int32(pagination.GetLimit()),
+		Offset: int32(pagination.GetOffset()),
+	}
+
+	products, err := s.queries.ListProductsByCategoryID(ctx, params)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Convert repository products to model products
+	result := make([]model.Product, len(products))
+	for i, p := range products {
+		result[i] = model.Product{
+			ID:                int(p.ID),
+			CategoryID:        int(p.CategoryID),
+			Name:              p.Name,
+			Slug:              p.Slug,
+			Description:       p.Description,
+			Price:             p.Price,
+			PriceSale:         p.PriceSale,
+			ImageURL:          p.ImageUrl,
+			ThumbURL:          p.ThumbUrl,
+			CreatedAt:         p.CreatedAt.Time,
+			CategoryName:      p.CategoryName,
+			CategorySlug:      p.CategorySlug,
+			UnitOfMeasurement: p.UnitOfMeasurement,
+		}
+	}
+
+	return result, totalCount, nil
+}
+
+// ListProductsByCategorySlug retrieves products by category slug
+func (s *ProductService) ListProductsByCategorySlug(ctx context.Context, categorySlug string, pagination model.Pagination) ([]model.Product, int64, error) {
+	// Get total count first
+	totalCount, err := s.queries.GetTotalProductsByCategorySlug(ctx, categorySlug)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get total count: %v", err)
+	}
+
+	params := repository.ListProductsByCategorySlugParams{
 		Slug:   categorySlug,
 		Limit:  int32(pagination.GetLimit()),
 		Offset: int32(pagination.GetOffset()),
 	}
 
-	products, err := s.queries.ListProductsByCategory(ctx, params)
+	products, err := s.queries.ListProductsByCategorySlug(ctx, params)
 	if err != nil {
 		return nil, 0, err
 	}

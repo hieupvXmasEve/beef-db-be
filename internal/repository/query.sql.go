@@ -322,21 +322,29 @@ func (q *Queries) GetTotalProducts(ctx context.Context) (int64, error) {
 	return total_count, err
 }
 
-const getTotalProductsByCategory = `-- name: GetTotalProductsByCategory :one
+const getTotalProductsByCategoryID = `-- name: GetTotalProductsByCategoryID :one
 SELECT COUNT(*) AS total_count 
 FROM products p
 JOIN categories c ON p.category_id = c.id
-WHERE (SQLC_OMIT_IF_NULL($1::int4) IS NULL OR c.id = $1)
-  AND (SQLC_OMIT_IF_NULL($2::text) IS NULL OR c.slug = $2)
+WHERE (c.id = $1)
 `
 
-type GetTotalProductsByCategoryParams struct {
-	ID   int32
-	Slug string
+func (q *Queries) GetTotalProductsByCategoryID(ctx context.Context, id int32) (int64, error) {
+	row := q.db.QueryRow(ctx, getTotalProductsByCategoryID, id)
+	var total_count int64
+	err := row.Scan(&total_count)
+	return total_count, err
 }
 
-func (q *Queries) GetTotalProductsByCategory(ctx context.Context, arg GetTotalProductsByCategoryParams) (int64, error) {
-	row := q.db.QueryRow(ctx, getTotalProductsByCategory, arg.ID, arg.Slug)
+const getTotalProductsByCategorySlug = `-- name: GetTotalProductsByCategorySlug :one
+SELECT COUNT(*) AS total_count 
+FROM products p
+JOIN categories c ON p.category_id = c.id
+WHERE (c.slug = $1)
+`
+
+func (q *Queries) GetTotalProductsByCategorySlug(ctx context.Context, slug string) (int64, error) {
+	row := q.db.QueryRow(ctx, getTotalProductsByCategorySlug, slug)
 	var total_count int64
 	err := row.Scan(&total_count)
 	return total_count, err
@@ -612,6 +620,162 @@ func (q *Queries) ListProductsByCategory(ctx context.Context, arg ListProductsBy
 			&i.CategoryName,
 			&i.CategorySlug,
 			&i.TotalCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProductsByCategoryID = `-- name: ListProductsByCategoryID :many
+SELECT
+    p.id,
+    p.category_id,
+    p.name,
+    p.slug,
+    p.description,
+    p.price,
+    p.price_sale,
+    p.unit_of_measurement,
+    p.image_url,
+    p.thumb_url,
+    p.created_at,
+    c.name as category_name,
+    c.slug as category_slug
+FROM products p
+JOIN categories c ON p.category_id = c.id
+WHERE c.id = $1
+ORDER BY p.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListProductsByCategoryIDParams struct {
+	ID     int32
+	Limit  int32
+	Offset int32
+}
+
+type ListProductsByCategoryIDRow struct {
+	ID                int32
+	CategoryID        int32
+	Name              string
+	Slug              string
+	Description       string
+	Price             float64
+	PriceSale         float64
+	UnitOfMeasurement string
+	ImageUrl          string
+	ThumbUrl          string
+	CreatedAt         pgtype.Timestamp
+	CategoryName      string
+	CategorySlug      string
+}
+
+func (q *Queries) ListProductsByCategoryID(ctx context.Context, arg ListProductsByCategoryIDParams) ([]ListProductsByCategoryIDRow, error) {
+	rows, err := q.db.Query(ctx, listProductsByCategoryID, arg.ID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProductsByCategoryIDRow
+	for rows.Next() {
+		var i ListProductsByCategoryIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CategoryID,
+			&i.Name,
+			&i.Slug,
+			&i.Description,
+			&i.Price,
+			&i.PriceSale,
+			&i.UnitOfMeasurement,
+			&i.ImageUrl,
+			&i.ThumbUrl,
+			&i.CreatedAt,
+			&i.CategoryName,
+			&i.CategorySlug,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProductsByCategorySlug = `-- name: ListProductsByCategorySlug :many
+SELECT
+    p.id,
+    p.category_id,
+    p.name,
+    p.slug,
+    p.description,
+    p.price,
+    p.price_sale,
+    p.unit_of_measurement,
+    p.image_url,
+    p.thumb_url,
+    p.created_at,
+    c.name as category_name,
+    c.slug as category_slug
+FROM products p
+JOIN categories c ON p.category_id = c.id
+WHERE c.slug = $1
+ORDER BY p.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListProductsByCategorySlugParams struct {
+	Slug   string
+	Limit  int32
+	Offset int32
+}
+
+type ListProductsByCategorySlugRow struct {
+	ID                int32
+	CategoryID        int32
+	Name              string
+	Slug              string
+	Description       string
+	Price             float64
+	PriceSale         float64
+	UnitOfMeasurement string
+	ImageUrl          string
+	ThumbUrl          string
+	CreatedAt         pgtype.Timestamp
+	CategoryName      string
+	CategorySlug      string
+}
+
+func (q *Queries) ListProductsByCategorySlug(ctx context.Context, arg ListProductsByCategorySlugParams) ([]ListProductsByCategorySlugRow, error) {
+	rows, err := q.db.Query(ctx, listProductsByCategorySlug, arg.Slug, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListProductsByCategorySlugRow
+	for rows.Next() {
+		var i ListProductsByCategorySlugRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CategoryID,
+			&i.Name,
+			&i.Slug,
+			&i.Description,
+			&i.Price,
+			&i.PriceSale,
+			&i.UnitOfMeasurement,
+			&i.ImageUrl,
+			&i.ThumbUrl,
+			&i.CreatedAt,
+			&i.CategoryName,
+			&i.CategorySlug,
 		); err != nil {
 			return nil, err
 		}

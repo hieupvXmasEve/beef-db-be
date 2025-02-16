@@ -121,33 +121,46 @@ func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 		model.NewSuccessResponse("Products retrieved successfully", paginatedResp))
 }
 
-// ListProductsByCategory retrieves products by category
-func (h *ProductHandler) ListProductsByCategory(w http.ResponseWriter, r *http.Request) {
+// ListProductsByCategoryByID retrieves products by category ID
+func (h *ProductHandler) ListProductsByCategoryByID(w http.ResponseWriter, r *http.Request) {
 	pagination := getPaginationFromRequest(r)
 
-	var categoryID int64
-	var categorySlug string
-
-	// Try to get category ID from URL
-	if idStr := chi.URLParam(r, "categoryId"); idStr != "" {
-		id, err := strconv.ParseInt(idStr, 10, 64)
-		if err != nil {
-			utils.SendResponse(w, http.StatusBadRequest,
-				model.NewErrorResponse("Invalid category ID", err.Error()))
-			return
-		}
-		categoryID = id
-	} else {
-		// If no ID, try to get slug
-		categorySlug = chi.URLParam(r, "categorySlug")
-		if categorySlug == "" {
-			utils.SendResponse(w, http.StatusBadRequest,
-				model.NewErrorResponse("Category ID or slug is required", nil))
-			return
-		}
+	idStr := chi.URLParam(r, "categoryId")
+	categoryID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		utils.SendResponse(w, http.StatusBadRequest,
+			model.NewErrorResponse("Invalid category ID", []model.ValidationError{
+				model.NewValidationError("categoryId", "Must be a valid number"),
+			}))
+		return
 	}
 
-	products, totalCount, err := h.productService.ListProductsByCategory(r.Context(), categoryID, categorySlug, pagination)
+	products, totalCount, err := h.productService.ListProductsByCategoryID(r.Context(), categoryID, pagination)
+	if err != nil {
+		utils.SendResponse(w, http.StatusInternalServerError,
+			model.NewErrorResponse("Failed to retrieve products", err.Error()))
+		return
+	}
+
+	paginatedResp := model.NewPaginatedResponse(products, totalCount, pagination.Page, pagination.PageSize)
+	utils.SendResponse(w, http.StatusOK,
+		model.NewSuccessResponse("Products retrieved successfully", paginatedResp))
+}
+
+// ListProductsByCategoryBySlug retrieves products by category slug
+func (h *ProductHandler) ListProductsByCategoryBySlug(w http.ResponseWriter, r *http.Request) {
+	pagination := getPaginationFromRequest(r)
+
+	categorySlug := chi.URLParam(r, "categorySlug")
+	if categorySlug == "" {
+		utils.SendResponse(w, http.StatusBadRequest,
+			model.NewErrorResponse("Category slug is required", []model.ValidationError{
+				model.NewValidationError("categorySlug", "Cannot be empty"),
+			}))
+		return
+	}
+
+	products, totalCount, err := h.productService.ListProductsByCategorySlug(r.Context(), categorySlug, pagination)
 	if err != nil {
 		utils.SendResponse(w, http.StatusInternalServerError,
 			model.NewErrorResponse("Failed to retrieve products", err.Error()))

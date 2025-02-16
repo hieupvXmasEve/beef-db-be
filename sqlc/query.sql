@@ -182,12 +182,17 @@ WHERE id = $1;
 -- name: GetTotalProducts :one
 SELECT COUNT(*) AS total_count FROM products;
 
--- name: GetTotalProductsByCategory :one
+-- name: GetTotalProductsByCategorySlug :one
 SELECT COUNT(*) AS total_count 
 FROM products p
 JOIN categories c ON p.category_id = c.id
-WHERE (SQLC_OMIT_IF_NULL(@id::int4) IS NULL OR c.id = @id)
-  AND (SQLC_OMIT_IF_NULL(@slug::text) IS NULL OR c.slug = @slug);
+WHERE (c.slug = @slug);
+
+-- name: GetTotalProductsByCategoryID :one
+SELECT COUNT(*) AS total_count 
+FROM products p
+JOIN categories c ON p.category_id = c.id
+WHERE (c.id = @id);
 
 -- name: CreateWebsiteSetting :one
 INSERT INTO website_settings (name, value)
@@ -216,3 +221,45 @@ WHERE name = $2;
 -- name: DeleteWebsiteSetting :exec
 DELETE FROM website_settings
 WHERE id = $1;
+
+-- name: ListProductsByCategoryID :many
+SELECT
+    p.id,
+    p.category_id,
+    p.name,
+    p.slug,
+    p.description,
+    p.price,
+    p.price_sale,
+    p.unit_of_measurement,
+    p.image_url,
+    p.thumb_url,
+    p.created_at,
+    c.name as category_name,
+    c.slug as category_slug
+FROM products p
+JOIN categories c ON p.category_id = c.id
+WHERE c.id = $1
+ORDER BY p.created_at DESC
+LIMIT $2 OFFSET $3;
+
+-- name: ListProductsByCategorySlug :many
+SELECT
+    p.id,
+    p.category_id,
+    p.name,
+    p.slug,
+    p.description,
+    p.price,
+    p.price_sale,
+    p.unit_of_measurement,
+    p.image_url,
+    p.thumb_url,
+    p.created_at,
+    c.name as category_name,
+    c.slug as category_slug
+FROM products p
+JOIN categories c ON p.category_id = c.id
+WHERE c.slug = $1
+ORDER BY p.created_at DESC
+LIMIT $2 OFFSET $3;

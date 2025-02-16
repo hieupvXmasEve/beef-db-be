@@ -72,8 +72,8 @@ func main() {
 		r.Get("/products/{id}", productHandler.GetProduct)
 		r.Get("/products/slug/{slug}", productHandler.GetProductBySlug)
 		r.Get("/products/by-setting-categories", productHandler.ListProductsBySettingCategories)
-		r.Get("/categories/{categoryId}/products", productHandler.ListProductsByCategory)
-		r.Get("/categories/slug/{categorySlug}/products", productHandler.ListProductsByCategory)
+		r.Get("/categories/{categoryId}/products", productHandler.ListProductsByCategoryByID)
+		r.Get("/categories/slug/{categorySlug}/products", productHandler.ListProductsByCategoryBySlug)
 
 		// Public website settings routes
 		r.Get("/settings", websiteSettingHandler.List)
