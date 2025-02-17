@@ -1,44 +1,44 @@
-name: Deploy go api
+# name: Deploy go api
 
-on:
-  push:
-    branches:
-      - main
+# on:
+#   push:
+#     branches:
+#       - main
 
-jobs:
-  deploy:
-    runs-on: self-hosted
-    steps:
-      - name: Clean workspace
-        run: sudo rm -rf /home/ubuntu/actions-runner/_work/beef-db-be/beef-db-be/certbot/
-      - name: Checkout code
-        uses: actions/checkout@v4
+# jobs:
+#   deploy:
+#     runs-on: self-hosted
+#     steps:
+#       - name: Clean workspace
+#         run: sudo rm -rf /home/ubuntu/actions-runner/_work/beef-db-be/beef-db-be/certbot/
+#       - name: Checkout code
+#         uses: actions/checkout@v4
 
-      - name: Create .env file
-        run: |
-          echo "PORT=${{secrets.PORT}}" >> .env
-          echo "DB_HOST=${{secrets.DB_HOST}}" >> .env
-          echo "DB_PORT=${{secrets.DB_PORT}}" >> .env
-          echo "DB_USER=${{secrets.DB_USER}}" >> .env
-          echo "DB_PASSWORD=${{secrets.DB_PASSWORD}}" >> .env
-          echo "DB_NAME=${{secrets.DB_NAME}}" >> .env
-          echo "JWT_SECRET=${{secrets.JWT_SECRET}}" >> .env
-          echo "JWT_EXPIRY_HOURS=${{secrets.JWT_EXPIRY_HOURS}}" >> .env
-          echo "ALLOWED_ORIGINS=${{secrets.ALLOWED_ORIGINS}}" >> .env
+#       - name: Create .env file
+#         run: |
+#           echo "PORT=${{secrets.PORT}}" >> .env
+#           echo "DB_HOST=${{secrets.DB_HOST}}" >> .env
+#           echo "DB_PORT=${{secrets.DB_PORT}}" >> .env
+#           echo "DB_USER=${{secrets.DB_USER}}" >> .env
+#           echo "DB_PASSWORD=${{secrets.DB_PASSWORD}}" >> .env
+#           echo "DB_NAME=${{secrets.DB_NAME}}" >> .env
+#           echo "JWT_SECRET=${{secrets.JWT_SECRET}}" >> .env
+#           echo "JWT_EXPIRY_HOURS=${{secrets.JWT_EXPIRY_HOURS}}" >> .env
+#           echo "ALLOWED_ORIGINS=${{secrets.ALLOWED_ORIGINS}}" >> .env
 
-      - name: Create required directories
-        run: |
-          mkdir -p certbot/www
-          mkdir -p certbot/conf
+#       - name: Create required directories
+#         run: |
+#           mkdir -p certbot/www
+#           mkdir -p certbot/conf
 
-      - name: Set up configuration
-        run: |
-          echo "${{ secrets.NGINX_CONF }}" > nginx.conf
+#       - name: Set up configuration
+#         run: |
+#           echo "${{ secrets.NGINX_CONF }}" > nginx.conf
 
-      - name: Stop and remove existing containers
-        run: docker-compose down || true
+#       - name: Stop and remove existing containers
+#         run: docker-compose down || true
 
-      - name: Build and deploy
-        run: |
-          docker-compose build
-          docker-compose up -d
+#       - name: Build and deploy
+#         run: |
+#           docker-compose build
+#           docker-compose up -d

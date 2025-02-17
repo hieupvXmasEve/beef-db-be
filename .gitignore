@@ -78,3 +78,6 @@ config.local.yaml
 # Debug files
 __debug_bin
 debug.test 
+
+main
+certbot/

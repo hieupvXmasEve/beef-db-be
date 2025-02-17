@@ -1,0 +1,24 @@
+FROM golang:1.22-alpine
+
+# Install CompileDaemon for hot reloading
+RUN go install github.com/githubnemo/CompileDaemon@latest
+
+# Install build essentials
+RUN apk add --no-cache gcc musl-dev
+
+WORKDIR /app
+
+# Copy go mod and sum files
+COPY go.mod go.sum ./
+
+# Download all dependencies
+RUN go mod download
+
+# Copy the source code
+COPY . .
+
+# Expose port
+EXPOSE 80
+
+# Command to run CompileDaemon (will be overridden by docker-compose)
+CMD ["CompileDaemon", "--build=go build -o main ./cmd/api", "--command=./main"] 

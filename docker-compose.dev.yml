@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8000:80"
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - go-mod-cache:/go/pkg/mod
+    networks:
+      - app_network
+    environment:
+      - GO_ENV=development
+      - PORT=80
+    # Enable hot reload with CompileDaemon
+    command: CompileDaemon --build="go build -o main ./cmd/api" --command="./main"
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.dev.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - app_network
+    depends_on:
+      - api
+
+volumes:
+  go-mod-cache:
+
+networks:
+  app_network:
+    driver: bridge 
