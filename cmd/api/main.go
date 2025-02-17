@@ -38,7 +38,7 @@ func main() {
 	// Initialize handlers
 	userHandler := handler.NewUserHandler(userService)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
-	productHandler := handler.NewProductHandler(productService, websiteSettingService)
+	productHandler := handler.NewProductHandler(productService, websiteSettingService, categoryService)
 	websiteSettingHandler := handler.NewWebsiteSettingHandler(websiteSettingService)
 
 	// Initialize router

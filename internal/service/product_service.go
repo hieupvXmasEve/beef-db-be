@@ -301,6 +301,7 @@ func (s *ProductService) GetProductsByCategoryIDs(ctx context.Context, categoryI
 		result = append(result, model.CategoryProductsResponse{
 			Name:     category.Name,
 			ImageURL: category.ImageUrl.String,
+			Slug:     category.Slug,
 			Products: modelProducts,
 		})
 	}

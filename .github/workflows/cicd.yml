@@ -1,0 +1,36 @@
+name: Deploy go api
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Create .env file
+        run: |
+          echo "PORT=${{secrets.PORT}}" >> .env
+      - name: Login to docker hub
+        run: docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PASSWORD}}
+
+      - name: Build docker image
+        run: docker build -t hieupv2412/beef-db-be:latest .
+
+      - name: Push docker image
+        run: docker push hieupv2412/beef-db-be:latest
+  
+  deploy:
+    needs: build
+    runs-on: self-hosted
+    steps: 
+      - name: Pull docker image
+        run: docker pull hieupv2412/beef-db-be:latest
+      - name: Delete old container
+        run: docker rm -f beef-db-be
+      - name: Run docker container
+        run: docker run -d -p 8080:8080 --name beef-db-be hieupv2412/beef-db-be:latest

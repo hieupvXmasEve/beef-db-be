@@ -75,10 +75,18 @@ type UpdateProductRequest struct {
 type CategoryProductsResponse struct {
 	Name     string    `json:"name"`
 	ImageURL string    `json:"image_url"`
+	Slug     string    `json:"slug"`
 	Products []Product `json:"products"`
 }
 
 // CategoryProductsListResponse represents a list of categories with their products
 type CategoryProductsListResponse struct {
 	Categories []CategoryProductsResponse `json:"categories"`
+}
+
+// CategoryWithProductsResponse represents a category with its paginated products
+type CategoryWithProductsResponse struct {
+	Category   Category          `json:"category"`
+	Products   []Product         `json:"products"`
+	Pagination PaginatedResponse `json:"pagination"`
 }

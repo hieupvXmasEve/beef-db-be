@@ -15,15 +15,17 @@ import (
 
 // ProductHandler handles HTTP requests related to products
 type ProductHandler struct {
-	productService *service.ProductService
-	websiteService *service.WebsiteSettingService
+	productService  *service.ProductService
+	websiteService  *service.WebsiteSettingService
+	categoryService *service.CategoryService
 }
 
 // NewProductHandler creates a new ProductHandler instance
-func NewProductHandler(productService *service.ProductService, websiteService *service.WebsiteSettingService) *ProductHandler {
+func NewProductHandler(productService *service.ProductService, websiteService *service.WebsiteSettingService, categoryService *service.CategoryService) *ProductHandler {
 	return &ProductHandler{
-		productService: productService,
-		websiteService: websiteService,
+		productService:  productService,
+		websiteService:  websiteService,
+		categoryService: categoryService,
 	}
 }
 
@@ -160,6 +162,15 @@ func (h *ProductHandler) ListProductsByCategoryBySlug(w http.ResponseWriter, r *
 		return
 	}
 
+	// First get the category information
+	category, err := h.categoryService.GetCategoryBySlug(r.Context(), categorySlug)
+	if err != nil {
+		utils.SendResponse(w, http.StatusNotFound,
+			model.NewErrorResponse("Category not found", err.Error()))
+		return
+	}
+
+	// Then get the products for this category
 	products, totalCount, err := h.productService.ListProductsByCategorySlug(r.Context(), categorySlug, pagination)
 	if err != nil {
 		utils.SendResponse(w, http.StatusInternalServerError,
@@ -168,8 +179,14 @@ func (h *ProductHandler) ListProductsByCategoryBySlug(w http.ResponseWriter, r *
 	}
 
 	paginatedResp := model.NewPaginatedResponse(products, totalCount, pagination.Page, pagination.PageSize)
+	response := model.CategoryWithProductsResponse{
+		Category:   *category,
+		Products:   products,
+		Pagination: paginatedResp,
+	}
+
 	utils.SendResponse(w, http.StatusOK,
-		model.NewSuccessResponse("Products retrieved successfully", paginatedResp))
+		model.NewSuccessResponse("Category and products retrieved successfully", response))
 }
 
 // UpdateProduct updates a product
