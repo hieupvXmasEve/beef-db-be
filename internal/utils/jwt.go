@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -20,6 +21,11 @@ const (
 type Claims struct {
 	UserID int64 `json:"user_id"`
 	jwt.RegisteredClaims
+}
+
+// isProduction returns true if the application is running in production mode
+func isProduction() bool {
+	return strings.Contains(os.Getenv("ALLOWED_ORIGINS"), "hieupv.site")
 }
 
 // GenerateJWT creates a new JWT token for a user
@@ -44,26 +50,40 @@ func GenerateJWT(userID int64) (string, error) {
 
 // SetJWTCookie sets the JWT token as an HTTP-only cookie
 func SetJWTCookie(w http.ResponseWriter, token string) {
+	isProd := isProduction()
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     TokenCookieName,
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false, // Enable in production (requires HTTPS)
-		SameSite: http.SameSiteNoneMode,
+		Secure:   isProd,                // Enable Secure flag in production (HTTPS)
+		SameSite: http.SameSiteNoneMode, // Use Strict in production, None in development
+		Domain:   getDomain(isProd),     // Set domain in production
 		MaxAge:   int(TokenExpiry.Seconds()),
 	})
 }
 
+// getDomain returns the appropriate domain based on the environment
+func getDomain(isProd bool) string {
+	if isProd {
+		return "hieupv.site" // Production domain
+	}
+	return "" // Empty for localhost
+}
+
 // ClearJWTCookie removes the JWT cookie
 func ClearJWTCookie(w http.ResponseWriter) {
+	isProd := isProduction()
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     TokenCookieName,
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   false,
+		Secure:   isProd,
 		SameSite: http.SameSiteNoneMode,
+		Domain:   getDomain(isProd),
 		MaxAge:   -1,
 	})
 }
