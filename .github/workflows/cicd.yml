@@ -15,22 +15,30 @@ jobs:
       - name: Create .env file
         run: |
           echo "PORT=${{secrets.PORT}}" >> .env
+          echo "DB_HOST=${{secrets.DB_HOST}}" >> .env
+          echo "DB_PORT=${{secrets.DB_PORT}}" >> .env
+          echo "DB_USER=${{secrets.DB_USER}}" >> .env
+          echo "DB_PASSWORD=${{secrets.DB_PASSWORD}}" >> .env
+          echo "DB_NAME=${{secrets.DB_NAME}}" >> .env
+          echo "JWT_SECRET=${{secrets.JWT_SECRET}}" >> .env
+          echo "JWT_EXPIRY_HOURS=${{secrets.JWT_EXPIRY_HOURS}}" >> .env
+          echo "ALLOWED_ORIGINS=${{secrets.ALLOWED_ORIGINS}}" >> .env
       - name: Login to docker hub
         run: docker login -u ${{secrets.DOCKER_USERNAME}} -p ${{secrets.DOCKER_PASSWORD}}
 
       - name: Build docker image
-        run: docker build -t hieupv2412/beef-db-be:latest .
+        run: docker build -t hieunuce/beef-db-be .
 
       - name: Push docker image
-        run: docker push hieupv2412/beef-db-be:latest
+        run: docker push hieunuce/beef-db-be:latest
   
   deploy:
     needs: build
     runs-on: self-hosted
     steps: 
       - name: Pull docker image
-        run: docker pull hieupv2412/beef-db-be:latest
+        run: docker pull hieunuce/beef-db-be:latest
       - name: Delete old container
         run: docker rm -f beef-db-be
       - name: Run docker container
-        run: docker run -d -p 8080:8080 --name beef-db-be hieupv2412/beef-db-be:latest
+        run: docker run -d -p 8080:8080 --name beef-db-be hieunuce/beef-db-be:latest
