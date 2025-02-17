@@ -50,7 +50,7 @@ func SetJWTCookie(w http.ResponseWriter, token string) {
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   false, // Enable in production (requires HTTPS)
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
 		MaxAge:   int(TokenExpiry.Seconds()),
 	})
 }
@@ -63,7 +63,7 @@ func ClearJWTCookie(w http.ResponseWriter) {
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   false,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
 		MaxAge:   -1,
 	})
 }

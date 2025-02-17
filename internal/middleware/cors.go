@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -14,6 +15,7 @@ func CORS(next http.Handler) http.Handler {
 		if allowedOrigins == "" {
 			allowedOrigins = "http://localhost:3000" // Default to React's development server
 		}
+		fmt.Println("Allowed origin:", allowedOrigins)
 
 		// Get the origin from the request
 		origin := r.Header.Get("Origin")
