@@ -41,4 +41,4 @@ jobs:
       - name: Delete old container
         run: docker rm -f beef-db-be
       - name: Run docker container
-        run: docker run -d -p 8080:8080 --name beef-db-be hieunuce/beef-db-be:latest
+        run: docker run -d -p 80:8080 --name beef-db-be hieunuce/beef-db-be:latest
