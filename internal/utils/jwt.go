@@ -25,7 +25,7 @@ type Claims struct {
 
 // isProduction returns true if the application is running in production mode
 func isProduction() bool {
-	return strings.Contains(os.Getenv("ALLOWED_ORIGINS"), "hieupv.site")
+	return strings.Contains(os.Getenv("ALLOWED_ORIGINS"), "beefsupplier.store")
 }
 
 // GenerateJWT creates a new JWT token for a user
@@ -67,12 +67,9 @@ func SetJWTCookie(w http.ResponseWriter, token string) {
 // getDomain returns the appropriate domain based on the environment
 func getDomain(isProd bool) string {
 	if isProd {
-		if os.Getenv("DOMAIN") != "" {
-			return os.Getenv("DOMAIN") // Production domain
-		}
-		return "" // Production domain
+		return ".beefsupplier.store" // Root domain for sharing cookies between subdomains
 	}
-	return "" // Empty for localhost
+	return "localhost" // For local development
 }
 
 // ClearJWTCookie removes the JWT cookie
