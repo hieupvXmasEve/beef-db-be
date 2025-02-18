@@ -57,9 +57,9 @@ func SetJWTCookie(w http.ResponseWriter, token string) {
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   isProd,                // Enable Secure flag in production (HTTPS)
+		Secure:   isProd,               // Enable Secure flag in production (HTTPS)
 		SameSite: http.SameSiteLaxMode, // Use Strict in production, None in development
-		Domain:   getDomain(isProd),     // Set domain in production
+		Domain:   getDomain(isProd),    // Set domain in production
 		MaxAge:   int(TokenExpiry.Seconds()),
 	})
 }
@@ -67,7 +67,10 @@ func SetJWTCookie(w http.ResponseWriter, token string) {
 // getDomain returns the appropriate domain based on the environment
 func getDomain(isProd bool) string {
 	if isProd {
-		return os.Getenv("DOMAIN") || "" // Production domain
+		if os.Getenv("DOMAIN") != "" {
+			return os.Getenv("DOMAIN") // Production domain
+		}
+		return "" // Production domain
 	}
 	return "" // Empty for localhost
 }
