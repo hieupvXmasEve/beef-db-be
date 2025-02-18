@@ -10,6 +10,17 @@ services:
     networks:
       - app_network
     restart: unless-stopped
+    
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    networks:
+      - app_network
+    restart: unless-stopped 
 networks:
   app_network:
     driver: bridge

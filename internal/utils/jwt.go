@@ -51,14 +51,14 @@ func GenerateJWT(userID int64) (string, error) {
 // SetJWTCookie sets the JWT token as an HTTP-only cookie
 func SetJWTCookie(w http.ResponseWriter, token string) {
 	isProd := isProduction()
-
+	fmt.Println("isProd", isProd)
 	http.SetCookie(w, &http.Cookie{
 		Name:     TokenCookieName,
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   isProd,                // Enable Secure flag in production (HTTPS)
-		SameSite: http.SameSiteNoneMode, // Use Strict in production, None in development
+		SameSite: http.SameSiteLaxMode, // Use Strict in production, None in development
 		Domain:   getDomain(isProd),     // Set domain in production
 		MaxAge:   int(TokenExpiry.Seconds()),
 	})
@@ -67,7 +67,7 @@ func SetJWTCookie(w http.ResponseWriter, token string) {
 // getDomain returns the appropriate domain based on the environment
 func getDomain(isProd bool) string {
 	if isProd {
-		return "hieupv.site" // Production domain
+		return os.Getenv("DOMAIN") || "" // Production domain
 	}
 	return "" // Empty for localhost
 }
@@ -82,7 +82,7 @@ func ClearJWTCookie(w http.ResponseWriter) {
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   isProd,
-		SameSite: http.SameSiteNoneMode,
+		SameSite: http.SameSiteLaxMode,
 		Domain:   getDomain(isProd),
 		MaxAge:   -1,
 	})
