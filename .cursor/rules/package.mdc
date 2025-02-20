@@ -1,0 +1,12 @@
+---
+description: all package using
+globs: 
+---
+
+# Package using
+- github.com/go-chi/chi/v5 v5.0.12
+- github.com/go-playground/validator/v10 v10.24.0
+- github.com/golang-jwt/jwt/v5 v5.2.0
+- github.com/jackc/pgx/v5 v5.7.2
+- github.com/joho/godotenv v1.5.1
+- golang.org/x/crypto v0.32.0

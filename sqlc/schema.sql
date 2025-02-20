@@ -1,3 +1,12 @@
+-- Function for updating timestamps
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
 -- Users Table
 CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
@@ -11,6 +20,12 @@ CREATE TABLE users (
 -- Create index on email for faster authentication
 CREATE INDEX idx_users_email ON users (email);
 
+-- Create trigger for users updated_at
+CREATE TRIGGER update_users_updated_at
+    BEFORE UPDATE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
 -- Product Categories Table
 CREATE TABLE categories (
     id SERIAL PRIMARY KEY,
@@ -18,7 +33,7 @@ CREATE TABLE categories (
     slug VARCHAR(150) NOT NULL UNIQUE,
     description TEXT,
     image_url VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create index on category name and slug for quick lookups
@@ -37,7 +52,7 @@ CREATE TABLE products (
     unit_of_measurement VARCHAR(50) NOT NULL DEFAULT 'piece',
     image_url VARCHAR(255),
     thumb_url VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE
 );
 
@@ -52,40 +67,57 @@ CREATE TABLE website_settings (
     value TEXT NOT NULL
 );
 
--- Blog Posts Table
-CREATE TABLE blog_posts (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    content TEXT NOT NULL,
-    image_url VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Create index on blog post title for search optimization
-CREATE INDEX idx_blog_posts_title ON blog_posts (title);
-
 -- Contact Messages Table
 CREATE TABLE contact_messages (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(150) NOT NULL,
     message TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create index on contact messages email for grouping messages
 CREATE INDEX idx_contact_messages_email ON contact_messages (email);
 
--- Create trigger for updated_at
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
+-- Blog Posts Table
+CREATE TABLE blog_posts (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT,
+    content TEXT NOT NULL,
+    image_url VARCHAR(255),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
-CREATE TRIGGER update_users_updated_at
-    BEFORE UPDATE ON users
+-- Create indexes for blog posts
+CREATE INDEX idx_blog_posts_title ON blog_posts (title);
+CREATE INDEX idx_blog_posts_slug ON blog_posts (slug);
+
+-- Create trigger for blog posts updated_at
+CREATE TRIGGER update_blog_posts_updated_at
+    BEFORE UPDATE ON blog_posts
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Pages Table
+CREATE TABLE pages (
+    id SERIAL PRIMARY KEY,
+    slug VARCHAR(255) UNIQUE NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for pages
+CREATE INDEX idx_pages_title ON pages (title);
+CREATE INDEX idx_pages_slug ON pages (slug);
+
+-- Create trigger for pages updated_at
+CREATE TRIGGER update_pages_updated_at
+    BEFORE UPDATE ON pages
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();

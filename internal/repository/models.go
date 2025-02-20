@@ -9,55 +9,68 @@ import (
 )
 
 type BlogPost struct {
-	ID        int32
-	Title     string
-	Content   string
-	ImageUrl  pgtype.Text
-	CreatedAt pgtype.Timestamp
+	ID          int32            `json:"id"`
+	Title       string           `json:"title"`
+	Slug        string           `json:"slug"`
+	Description string           `json:"description"`
+	Content     string           `json:"content"`
+	ImageUrl    string           `json:"image_url"`
+	CreatedAt   pgtype.Timestamp `json:"created_at"`
+	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
 }
 
 type Category struct {
-	ID          int32
-	Name        string
-	Slug        string
-	Description pgtype.Text
-	ImageUrl    pgtype.Text
-	CreatedAt   pgtype.Timestamp
+	ID          int32            `json:"id"`
+	Name        string           `json:"name"`
+	Slug        string           `json:"slug"`
+	Description pgtype.Text      `json:"description"`
+	ImageUrl    pgtype.Text      `json:"image_url"`
+	CreatedAt   pgtype.Timestamp `json:"created_at"`
 }
 
 type ContactMessage struct {
-	ID        int32
-	Name      string
-	Email     string
-	Message   string
-	CreatedAt pgtype.Timestamp
+	ID        int32            `json:"id"`
+	Name      string           `json:"name"`
+	Email     string           `json:"email"`
+	Message   string           `json:"message"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+}
+
+type Page struct {
+	ID          int32            `json:"id"`
+	Slug        string           `json:"slug"`
+	Title       string           `json:"title"`
+	Description string           `json:"description"`
+	Content     string           `json:"content"`
+	CreatedAt   pgtype.Timestamp `json:"created_at"`
+	UpdatedAt   pgtype.Timestamp `json:"updated_at"`
 }
 
 type Product struct {
-	ID                int32
-	CategoryID        int32
-	Name              string
-	Slug              string
-	Description       string
-	Price             float64
-	PriceSale         float64
-	UnitOfMeasurement string
-	ImageUrl          string
-	ThumbUrl          string
-	CreatedAt         pgtype.Timestamp
+	ID                int32            `json:"id"`
+	CategoryID        int32            `json:"category_id"`
+	Name              string           `json:"name"`
+	Slug              string           `json:"slug"`
+	Description       string           `json:"description"`
+	Price             float64          `json:"price"`
+	PriceSale         float64          `json:"price_sale"`
+	UnitOfMeasurement string           `json:"unit_of_measurement"`
+	ImageUrl          string           `json:"image_url"`
+	ThumbUrl          string           `json:"thumb_url"`
+	CreatedAt         pgtype.Timestamp `json:"created_at"`
 }
 
 type User struct {
-	ID        int64
-	Email     string
-	Password  string
-	Role      string
-	CreatedAt pgtype.Timestamp
-	UpdatedAt pgtype.Timestamp
+	ID        int64            `json:"id"`
+	Email     string           `json:"email"`
+	Password  string           `json:"password"`
+	Role      string           `json:"role"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	UpdatedAt pgtype.Timestamp `json:"updated_at"`
 }
 
 type WebsiteSetting struct {
-	ID    int32
-	Name  string
-	Value string
+	ID    int32  `json:"id"`
+	Name  string `json:"name"`
+	Value string `json:"value"`
 }

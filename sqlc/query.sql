@@ -183,13 +183,13 @@ WHERE id = $1;
 SELECT COUNT(*) AS total_count FROM products;
 
 -- name: GetTotalProductsByCategorySlug :one
-SELECT COUNT(*) AS total_count 
+SELECT COUNT(*) AS total_count
 FROM products p
 JOIN categories c ON p.category_id = c.id
 WHERE (c.slug = @slug);
 
 -- name: GetTotalProductsByCategoryID :one
-SELECT COUNT(*) AS total_count 
+SELECT COUNT(*) AS total_count
 FROM products p
 JOIN categories c ON p.category_id = c.id
 WHERE (c.id = @id);
@@ -263,3 +263,104 @@ JOIN categories c ON p.category_id = c.id
 WHERE c.slug = $1
 ORDER BY p.created_at DESC
 LIMIT $2 OFFSET $3;
+
+-- Blog Post Queries
+-- name: CreateBlogPost :one
+INSERT INTO blog_posts (
+    title,
+    description,
+    content,
+    slug,
+    image_url,
+    created_at
+)
+VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+RETURNING *;
+
+-- name: GetBlogPost :one
+SELECT *
+FROM blog_posts
+WHERE id = $1;
+
+-- name: GetBlogPostBySlug :one
+SELECT *
+FROM blog_posts
+WHERE slug = $1;
+
+-- name: ListBlogPosts :many
+SELECT *
+FROM blog_posts
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2;
+
+-- name: UpdateBlogPost :exec
+UPDATE blog_posts
+SET 
+    title = $1,
+    description = $2,
+    content = $3,
+    image_url = $4,
+    slug = $5
+WHERE id = $6;
+
+-- name: DeleteBlogPost :exec
+DELETE FROM blog_posts
+WHERE id = $1;
+
+-- name: GetTotalBlogPosts :one
+SELECT COUNT(*) as total_count
+FROM blog_posts;
+
+-- name: SearchBlogPosts :many
+SELECT *
+FROM blog_posts
+WHERE 
+    title ILIKE '%' || $1 || '%' OR
+    content ILIKE '%' || $1 || '%'
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3;
+
+-- Pages Queries
+-- name: CreatePage :one
+INSERT INTO pages (
+    slug,
+    title,
+    content,
+    created_at,
+    updated_at
+)
+VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+RETURNING *;
+
+-- name: GetPage :one
+SELECT *
+FROM pages
+WHERE id = $1;
+
+-- name: GetPageBySlug :one
+SELECT *
+FROM pages
+WHERE slug = $1;
+
+-- name: ListPages :many
+SELECT *
+FROM pages
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2;
+
+-- name: UpdatePage :exec
+UPDATE pages
+SET 
+    slug = $1,
+    title = $2,
+    content = $3,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = $4;
+
+-- name: DeletePage :exec
+DELETE FROM pages
+WHERE id = $1;
+
+-- -- name: GetTotalPages :one
+-- SELECT COUNT(*) as total_count
+-- FROM pages;

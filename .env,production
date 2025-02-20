@@ -14,5 +14,5 @@ JWT_SECRET=4Qp#n1UH6=
 JWT_EXPIRY_HOURS=72
 
 # CORS Configuration
-ALLOWED_ORIGINS=http://localhost:3000, http://127.0.0.1:3000, https://beefsupplier.store
+ALLOWED_ORIGINS=https://beefsupplier.store, https://www.beefsupplier.store
 DOMAIN=beefsupplier.store

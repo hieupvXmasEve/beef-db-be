@@ -29,24 +29,6 @@ func NewProductHandler(productService *service.ProductService, websiteService *s
 	}
 }
 
-// getPaginationFromRequest extracts pagination parameters from request query
-func getPaginationFromRequest(r *http.Request) model.Pagination {
-	page, err := strconv.Atoi(r.URL.Query().Get("page"))
-	if err != nil || page < 1 {
-		page = 1
-	}
-
-	pageSize, err := strconv.Atoi(r.URL.Query().Get("page_size"))
-	if err != nil || pageSize < 1 {
-		pageSize = 10
-	}
-
-	return model.Pagination{
-		Page:     page,
-		PageSize: pageSize,
-	}
-}
-
 // CreateProduct handles product creation
 func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	var req model.CreateProductRequest
@@ -108,7 +90,7 @@ func (h *ProductHandler) GetProductBySlug(w http.ResponseWriter, r *http.Request
 
 // ListProducts retrieves all products
 func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
-	pagination := getPaginationFromRequest(r)
+	pagination := utils.GetPaginationFromRequest(r)
 
 	products, totalCount, err := h.productService.ListProducts(r.Context(), pagination)
 	if err != nil {
@@ -125,7 +107,7 @@ func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 
 // ListProductsByCategoryByID retrieves products by category ID
 func (h *ProductHandler) ListProductsByCategoryByID(w http.ResponseWriter, r *http.Request) {
-	pagination := getPaginationFromRequest(r)
+	pagination := utils.GetPaginationFromRequest(r)
 
 	idStr := chi.URLParam(r, "categoryId")
 	categoryID, err := strconv.ParseInt(idStr, 10, 64)
@@ -151,7 +133,7 @@ func (h *ProductHandler) ListProductsByCategoryByID(w http.ResponseWriter, r *ht
 
 // ListProductsByCategoryBySlug retrieves products by category slug
 func (h *ProductHandler) ListProductsByCategoryBySlug(w http.ResponseWriter, r *http.Request) {
-	pagination := getPaginationFromRequest(r)
+	pagination := utils.GetPaginationFromRequest(r)
 
 	categorySlug := chi.URLParam(r, "categorySlug")
 	if categorySlug == "" {

@@ -1,0 +1,6 @@
+---
+description: database
+globs: 
+---
+# Connect database Rule
+- Use `github.com/jackc/pgx/v5` and `github.com/jackc/pgx/v5/pgxpool` to connect to the database.

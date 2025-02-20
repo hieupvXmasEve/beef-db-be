@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -17,7 +18,11 @@ import (
 
 func main() {
 	// Load environment variables
-	if err := godotenv.Load(); err != nil {
+	env := os.Getenv("GO_ENV")
+	if env == "" {
+		env = "local" // Mặc định là local nếu không có biến môi trường
+	}
+	if err := godotenv.Load(fmt.Sprintf(".env.%s", env)); err != nil {
 		log.Printf("Warning: .env file not found")
 	}
 
@@ -34,12 +39,16 @@ func main() {
 	productService := service.NewProductService(pool)
 	websiteSettingService := service.NewWebsiteSettingService(pool)
 	healthHandler := handler.NewHealthHandler(pool)
+	pageService := service.NewPageService(pool)
+	blogPostService := service.NewBlogPostService(pool)
 
 	// Initialize handlers
 	userHandler := handler.NewUserHandler(userService)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
 	productHandler := handler.NewProductHandler(productService, websiteSettingService, categoryService)
 	websiteSettingHandler := handler.NewWebsiteSettingHandler(websiteSettingService)
+	pageHandler := handler.NewPageHandler(pageService)
+	blogPostHandler := handler.NewBlogPostHandler(blogPostService)
 
 	// Initialize router
 	r := chi.NewRouter()
@@ -75,6 +84,16 @@ func main() {
 		r.Get("/categories/{categoryId}/products", productHandler.ListProductsByCategoryByID)
 		r.Get("/categories/slug/{categorySlug}/products", productHandler.ListProductsByCategoryBySlug)
 
+		// Public page routes
+		r.Get("/pages", pageHandler.ListPages)
+		r.Get("/pages/{id}", pageHandler.GetPage)
+		r.Get("/pages/slug/{slug}", pageHandler.GetPageBySlug)
+
+		// Public blog post routes
+		r.Get("/blog-posts", blogPostHandler.List)
+		r.Get("/blog-posts/{id}", blogPostHandler.GetByID)
+		r.Get("/blog-posts/slug/{slug}", blogPostHandler.GetBySlug)
+
 		// Public website settings routes
 		r.Get("/settings", websiteSettingHandler.List)
 		r.Get("/settings/{id}", websiteSettingHandler.Get)
@@ -102,6 +121,16 @@ func main() {
 			r.Post("/settings", websiteSettingHandler.Create)
 			r.Put("/settings/name/{name}", websiteSettingHandler.Update)
 			r.Delete("/settings/{id}", websiteSettingHandler.Delete)
+
+			// Page management
+			r.Post("/pages", pageHandler.CreatePage)
+			r.Put("/pages/{id}", pageHandler.UpdatePage)
+			r.Delete("/pages/{id}", pageHandler.DeletePage)
+
+			// Blog post management
+			r.Post("/blog-posts", blogPostHandler.Create)
+			r.Put("/blog-posts/{id}", blogPostHandler.Update)
+			r.Delete("/blog-posts/{id}", blogPostHandler.Delete)
 		})
 	})
 

@@ -1,7 +1,7 @@
 .PHONY: all build run clean test coverage lint sqlc help migrate-create migrate-up migrate-down migrate-force migrate-version
 
 # Include .env file
-include .env
+include .env.local
 export
 
 # Go parameters
@@ -73,11 +73,11 @@ migrate-create:
 
 migrate-up:
 	@echo "Running migrations up..."
-	cd scripts && ./migrate.sh up
+	migrate -database "$(DB_URL)" -path migrations up
 
 migrate-down:
 	@echo "Running migrations down..."
-	cd scripts && ./migrate.sh down
+	migrate -database "$(DB_URL)" -path migrations down
 
 migrate-force:
 	@echo "Forcing migration version..."
