@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -98,8 +97,6 @@ func (h *ProductHandler) ListProducts(w http.ResponseWriter, r *http.Request) {
 			model.NewErrorResponse("Failed to retrieve products", err.Error()))
 		return
 	}
-
-	fmt.Println("totalCount", products[0])
 	paginatedResp := model.NewPaginatedResponse(products, totalCount, pagination.Page, pagination.PageSize)
 	utils.SendResponse(w, http.StatusOK,
 		model.NewSuccessResponse("Products retrieved successfully", paginatedResp))

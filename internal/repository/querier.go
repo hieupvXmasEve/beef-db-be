@@ -32,6 +32,7 @@ type Querier interface {
 	GetProduct(ctx context.Context, id int32) (GetProductRow, error)
 	GetProductBySlug(ctx context.Context, slug string) (GetProductBySlugRow, error)
 	GetTotalBlogPosts(ctx context.Context) (int64, error)
+	GetTotalPages(ctx context.Context) (int64, error)
 	GetTotalProducts(ctx context.Context) (int64, error)
 	GetTotalProductsByCategoryID(ctx context.Context, id int32) (int64, error)
 	GetTotalProductsByCategorySlug(ctx context.Context, slug string) (int64, error)

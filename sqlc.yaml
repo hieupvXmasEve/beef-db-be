@@ -26,15 +26,6 @@ sql:
           - column: "products.thumb_url"
             go_type: "string"
             nullable: true
-          - column: "blog_posts.image_url"
-            go_type: "string"
-            nullable: true
-          - column: "blog_posts.description"
-            go_type: "string"
-            nullable: true
-          - column: "pages.description"
-            go_type: "string"
-            nullable: true
         # emit_json_tags: true
         # emit_prepared_queries: false
         # emit_exact_table_names: false

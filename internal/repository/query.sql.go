@@ -507,6 +507,18 @@ func (q *Queries) GetTotalBlogPosts(ctx context.Context) (int64, error) {
 	return total_count, err
 }
 
+const getTotalPages = `-- name: GetTotalPages :one
+SELECT COUNT(*) as total_count
+FROM pages
+`
+
+func (q *Queries) GetTotalPages(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, getTotalPages)
+	var total_count int64
+	err := row.Scan(&total_count)
+	return total_count, err
+}
+
 const getTotalProducts = `-- name: GetTotalProducts :one
 SELECT COUNT(*) AS total_count FROM products
 `

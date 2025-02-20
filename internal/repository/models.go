@@ -40,7 +40,7 @@ type Page struct {
 	ID          int32            `json:"id"`
 	Slug        string           `json:"slug"`
 	Title       string           `json:"title"`
-	Description string           `json:"description"`
+	Description pgtype.Text      `json:"description"`
 	Content     string           `json:"content"`
 	CreatedAt   pgtype.Timestamp `json:"created_at"`
 	UpdatedAt   pgtype.Timestamp `json:"updated_at"`

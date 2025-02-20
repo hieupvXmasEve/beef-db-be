@@ -361,6 +361,6 @@ WHERE id = $4;
 DELETE FROM pages
 WHERE id = $1;
 
--- -- name: GetTotalPages :one
--- SELECT COUNT(*) as total_count
--- FROM pages;
+-- name: GetTotalPages :one
+SELECT COUNT(*) as total_count
+FROM pages;

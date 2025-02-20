@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -75,13 +76,17 @@ func (s *PageService) GetPageBySlug(ctx context.Context, slug string) (*model.Pa
 	}, nil
 }
 
-func (s *PageService) ListPages(ctx context.Context, limit, offset int32) ([]model.Page, error) {
+func (s *PageService) ListPages(ctx context.Context, pagination model.Pagination) ([]model.Page, int64, error) {
+	totalCount, err := s.queries.GetTotalPages(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get total count: %v", err)
+	}
 	pages, err := s.queries.ListPages(ctx, repository.ListPagesParams{
-		Limit:  limit,
-		Offset: offset,
+		Limit:  int32(pagination.GetLimit()),
+		Offset: int32(pagination.GetOffset()),
 	})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	result := make([]model.Page, len(pages))
@@ -94,7 +99,7 @@ func (s *PageService) ListPages(ctx context.Context, limit, offset int32) ([]mod
 			CreatedAt: page.CreatedAt.Time,
 		}
 	}
-	return result, nil
+	return result, totalCount, nil
 }
 
 func (s *PageService) UpdatePage(ctx context.Context, id int32, req model.UpdatePageRequest) error {

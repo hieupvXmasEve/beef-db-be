@@ -89,18 +89,17 @@ func (h *PageHandler) GetPageBySlug(w http.ResponseWriter, r *http.Request) {
 		model.NewSuccessResponse("Page retrieved successfully", page))
 }
 
+// ListPages handles the retrieval of a paginated list of pages
 func (h *PageHandler) ListPages(w http.ResponseWriter, r *http.Request) {
 	pagination := utils.GetPaginationFromRequest(r)
 
-	pages, err := h.pageService.ListPages(r.Context(), int32(pagination.PageSize), int32((pagination.Page-1)*pagination.PageSize))
+	pages, totalCount, err := h.pageService.ListPages(r.Context(), pagination)
 	if err != nil {
 		utils.SendResponse(w, http.StatusInternalServerError,
 			model.NewErrorResponse("Failed to list pages", err.Error()))
 		return
 	}
 
-	// TODO: Get total count from service
-	totalCount := int64(len(pages))
 	paginatedResp := model.NewPaginatedResponse(pages, totalCount, pagination.Page, pagination.PageSize)
 	utils.SendResponse(w, http.StatusOK,
 		model.NewSuccessResponse("Pages retrieved successfully", paginatedResp))
